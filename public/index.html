@@ -3,59 +3,97 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Seik — Status</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>Seik — Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/theme.css" />
-<link rel="stylesheet" href="/css/status.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
 </head>
-<body class="seik-body">
-  <div class="filmstrip filmstrip-top" aria-hidden="true"></div>
+<body>
+  <div class="filmstrip" aria-hidden="true"></div>
 
-  <main class="seik-main">
-    <header class="seik-header">
-      <span class="seik-mark"><i class="fa-solid fa-aperture"></i></span>
-      <h1 class="seik-title">Seik</h1>
-      <p class="seik-sub">Image &amp; document management — scaffold status</p>
-      <a href="/upload.html" class="seik-cta"><i class="fa-solid fa-arrow-up-from-bracket"></i> Try the uploader</a>
-    </header>
-
-    <section class="seik-card" id="health-card">
-      <div class="seik-card-row">
-        <span class="dot dot-pending" id="health-dot"></span>
-        <span id="health-text">Checking API…</span>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a href="/" class="brand"><i class="fa-solid fa-aperture"></i><span>Seik</span></a>
+      <nav class="nav">
+        <a href="/" class="nav-link active"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+        <a href="/upload.html" class="nav-link"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</a>
+        <a href="#" class="nav-link disabled"><i class="fa-solid fa-images"></i> Gallery</a>
+        <a href="#" class="nav-link disabled"><i class="fa-solid fa-folder-open"></i> Albums</a>
+        <a href="#" class="nav-link disabled"><i class="fa-solid fa-tag"></i> Tags</a>
+      </nav>
+      <div class="sidebar-foot mono" id="api-status">
+        <span class="dot dot-pending"></span> checking…
       </div>
-      <code class="seik-meta" id="health-meta">GET /api/health</code>
-    </section>
+    </aside>
 
-    <section class="seik-grid">
-      <article class="seik-tile done">
-        <i class="fa-solid fa-folder-tree"></i>
-        <h2>Phase 1 — Setup</h2>
-        <p>Structure, config, env</p>
-      </article>
-      <article class="seik-tile done">
-        <i class="fa-solid fa-database"></i>
-        <h2>Phase 2 — Schema</h2>
-        <p>Drizzle + Neon, 7 tables</p>
-      </article>
-      <article class="seik-tile done">
-        <i class="fa-solid fa-cloud-arrow-up"></i>
-        <h2>Phase 3 — Storage</h2>
-        <p>StorageProvider + ImgBB</p>
-      </article>
-      <article class="seik-tile pending">
-        <i class="fa-solid fa-images"></i>
-        <h2>Phase 4+ — Gallery</h2>
-        <p>Not built yet</p>
-      </article>
-    </section>
-  </main>
+    <!-- Main -->
+    <main class="dash-main">
+      <header class="dash-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="dash-sub" id="dash-date"></p>
+        </div>
+        <a href="/upload.html" class="btn btn-accent"><i class="fa-solid fa-plus"></i> Upload</a>
+      </header>
 
-  <div class="filmstrip filmstrip-bottom" aria-hidden="true"></div>
+      <!-- Stats row -->
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <i class="fa-solid fa-file-image stat-icon"></i>
+          <div>
+            <div class="stat-value" id="stat-files">—</div>
+            <div class="stat-label">Files</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="fa-solid fa-weight-hanging stat-icon"></i>
+          <div>
+            <div class="stat-value" id="stat-size">—</div>
+            <div class="stat-label">Stored</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="fa-solid fa-folder-open stat-icon"></i>
+          <div>
+            <div class="stat-value" id="stat-albums">—</div>
+            <div class="stat-label">Albums</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <i class="fa-solid fa-compress stat-icon"></i>
+          <div>
+            <div class="stat-value" id="stat-saved">—</div>
+            <div class="stat-label">Saved by compression</div>
+          </div>
+        </div>
+      </div>
 
-  <script src="/js/status.js"></script>
+      <!-- Recent uploads -->
+      <section class="section">
+        <div class="section-head">
+          <h2>Recent uploads</h2>
+          <span class="mono" id="recent-count"></span>
+        </div>
+        <div class="gallery" id="gallery">
+          <div class="gallery-empty" id="gallery-empty" hidden>
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>No files yet. <a href="/upload.html">Upload something →</a></p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" id="lb-close"><i class="fa-solid fa-xmark"></i></button>
+    <img class="lb-img" id="lb-img" src="" alt="" />
+    <div class="lb-meta" id="lb-meta"></div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
 </body>
 </html>

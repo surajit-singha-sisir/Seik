@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Seik — Scaffold Status</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css" />
+<link rel="stylesheet" href="/css/status.css" />
+</head>
+<body class="seik-body">
+  <div class="filmstrip filmstrip-top" aria-hidden="true"></div>
+  <main class="seik-main">
+    <header class="seik-header">
+      <span class="seik-mark"><i class="fa-solid fa-aperture"></i></span>
+      <h1 class="seik-title">Seik</h1>
+      <p class="seik-sub">Image &amp; document management — scaffold status</p>
+      <a href="/" class="seik-cta"><i class="fa-solid fa-grid-2"></i> Go to dashboard</a>
+    </header>
+    <section class="seik-card" id="health-card">
+      <div class="seik-card-row">
+        <span class="dot dot-pending" id="health-dot"></span>
+        <span id="health-text">Checking API…</span>
+      </div>
+      <code class="seik-meta" id="health-meta">GET /api/health</code>
+    </section>
+    <section class="seik-grid">
+      <article class="seik-tile done">
+        <i class="fa-solid fa-folder-tree"></i>
+        <h2>Phase 1 — Setup</h2>
+        <p>Structure, config, env</p>
+      </article>
+      <article class="seik-tile done">
+        <i class="fa-solid fa-database"></i>
+        <h2>Phase 2 — Schema</h2>
+        <p>Drizzle + Neon, 7 tables</p>
+      </article>
+      <article class="seik-tile done">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <h2>Phase 3 — Storage</h2>
+        <p>StorageProvider + ImgBB</p>
+      </article>
+      <article class="seik-tile done">
+        <i class="fa-solid fa-paper-plane"></i>
+        <h2>Phase 4 — Upload pipeline</h2>
+        <p>All 5 methods + live preview</p>
+      </article>
+      <article class="seik-tile pending">
+        <i class="fa-solid fa-images"></i>
+        <h2>Phase 5+ — Gallery</h2>
+        <p>Not built yet</p>
+      </article>
+    </section>
+  </main>
+  <div class="filmstrip filmstrip-bottom" aria-hidden="true"></div>
+  <script src="/js/status.js"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import uploadsRouter from './api/routes/uploads.js';
+import dashboardRouter from './api/routes/dashboard.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,7 @@ app.use(
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/uploads', uploadsRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });
