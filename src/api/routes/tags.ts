@@ -4,6 +4,18 @@ import { desc, eq, count } from 'drizzle-orm';
 
 const router = Router();
 
+/** Unicode-safe slug: keeps letters/numbers from any script, strips symbols/emoji.
+ *  Falls back to a random suffix only if the name has no letters/numbers at all. */
+function slugify(name: string): string {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}-]+/gu, '');
+  return base || `tag-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /** GET /api/tags */
 router.get('/', async (_req, res) => {
   try {
@@ -29,7 +41,7 @@ router.post('/', async (req, res) => {
   try {
     const { name } = req.body as { name?: string };
     if (!name?.trim()) return res.status(400).json({ error: 'name is required.' });
-    const slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const slug = slugify(name);
     const [row] = await db.insert(tags).values({ name: name.trim(), slug }).returning();
     res.status(201).json(row);
   } catch (err: any) {
@@ -44,7 +56,7 @@ router.patch('/:id', async (req, res) => {
   try {
     const { name } = req.body as { name?: string };
     if (!name?.trim()) return res.status(400).json({ error: 'name is required.' });
-    const slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const slug = slugify(name);
     const [row] = await db.update(tags)
       .set({ name: name.trim(), slug })
       .where(eq(tags.id, req.params.id))
