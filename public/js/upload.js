@@ -36,14 +36,6 @@ const summaryAlbumName  = document.getElementById('summary-album-name');
 const summaryTagsRow    = document.getElementById('summary-tags-row');
 const summaryTagsList   = document.getElementById('summary-tags-list');
 
-// ── Duplicate modal refs (kept for legacy HTML; modal no longer used) ────────
-const dupBackdrop     = document.getElementById('dup-modal-backdrop');
-const dupModalList    = document.getElementById('dup-modal-list');
-const dupModalSubtitle= document.getElementById('dup-modal-subtitle');
-const btnDupRemoveAll = document.getElementById('dup-modal-remove-all');
-const btnDupCancel    = document.getElementById('dup-modal-cancel');
-const btnDupUploadAll = document.getElementById('dup-modal-upload-all');
-
 // ── State ─────────────────────────────────────────────────
 const queue = [];
 let nextId = 0;
@@ -191,7 +183,6 @@ function addToQueue(file, urlString) {
   const redEl     = node.querySelector('.q-reduction');
   const arrowEl   = node.querySelector('.q-arrow');
   const progBar   = node.querySelector('.q-progress-bar');
-  const dupEl     = node.querySelector('.q-duplicate');
   const errEl     = node.querySelector('.q-error');
   const badgeEl   = node.querySelector('.q-badge');
   const thumbEl   = node.querySelector('.q-thumb');
@@ -203,7 +194,7 @@ function addToQueue(file, urlString) {
   const entry = {
     id, file, urlString,
     node, nameEl, origEl, compEl, redEl, arrowEl,
-    progBar, dupEl, errEl, badgeEl, thumbEl,
+    progBar, errEl, badgeEl, thumbEl,
     qualSlider, qualVal, qualRow, rmBtn,
     status: 'queued',
   };
@@ -259,17 +250,10 @@ function setStatus(entry, status) {
     uploading:  ['uploading',''],
     done:       ['done',     'ok'],
     failed:     ['failed',   'fail'],
-    duplicate:  ['duplicate','warn'],
   };
   const [text, cls] = labels[status] || ['', ''];
   badge.textContent = text;
   badge.className = 'q-badge' + (cls ? ` q-badge-${cls}` : '');
-}
-
-function showDuplicate(entry) {
-  entry.dupEl.hidden = false;
-  entry.dupEl.querySelector('span').textContent = 'Same filename & size already exists — skipped';
-  setStatus(entry, 'duplicate');
 }
 
 function showError(entry, msg) {
@@ -281,22 +265,6 @@ function showError(entry, msg) {
     uploadEntry(entry);
   };
   setStatus(entry, 'failed');
-}
-
-// ── Pre-upload duplicate check ────────────────────────────
-async function preCheckDuplicate(file) {
-  try {
-    const res = await fetch('/api/uploads/check-duplicate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: file.name, size: file.size }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.duplicate ?? null;
-  } catch {
-    return null;
-  }
 }
 
 // ── XHR upload with progress ──────────────────────────────
@@ -328,7 +296,6 @@ async function uploadEntry(entry) {
 
   setStatus(entry, 'uploading');
   entry.errEl.hidden = true;
-  entry.dupEl.hidden = true;
   entry.progBar.style.width = '0%';
 
   try {
@@ -372,12 +339,7 @@ async function uploadEntry(entry) {
       entry.redEl.className = 'q-reduction' + (c.reductionPercent > 0 ? ' q-reduction-good' : '');
     }
 
-    // Post-upload server-side duplicate check (hash-based)
-    if (data.duplicate) {
-      showDuplicate(entry, data.duplicate);
-    } else {
-      setStatus(entry, 'done');
-    }
+    setStatus(entry, 'done');
 
     // Update thumb with returned URL if available
     if (data.file?.thumbUrl && entry.thumbEl) {
@@ -395,47 +357,11 @@ async function uploadEntry(entry) {
   }
 }
 
-// ── Upload All logic (hard-block duplicates before upload) ──
-async function startUploadAll() {
+// ── Upload All logic ─────────────────────────────────────
+function startUploadAll() {
   const pending = queue.filter(e => e.status === 'queued');
   if (!pending.length) return;
-
-  // Disable button while checking
-  btnUploadAll.disabled = true;
-  btnUploadAll.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
-
-  // Check all file entries for duplicates in parallel
-  const checks = await Promise.all(
-    pending.map(async e => ({
-      entry: e,
-      isDup: e.file ? (await preCheckDuplicate(e.file)) !== null : false,
-    }))
-  );
-
-  btnUploadAll.disabled = false;
-  btnUploadAll.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Upload all';
-
-  // Mark duplicates and collect non-duplicates
-  const toUpload = [];
-  let dupCount = 0;
-  for (const { entry, isDup } of checks) {
-    if (isDup) {
-      showDuplicate(entry);
-      dupCount++;
-    } else {
-      toUpload.push(entry);
-    }
-  }
-
-  if (dupCount > 0) {
-    showToast(
-      `${dupCount} duplicate${dupCount !== 1 ? 's' : ''} skipped`,
-      'warn'
-    );
-  }
-
-  // Upload only the non-duplicate entries
-  toUpload.forEach(e => uploadEntry(e));
+  pending.forEach(e => uploadEntry(e));
 }
 
 // ── File ingestion ────────────────────────────────────────

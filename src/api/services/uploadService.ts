@@ -6,7 +6,6 @@ import { validateUpload } from '../../utils/validateUpload.js';
 import { UploadError } from '../../utils/errors.js';
 import { extractMetadata } from './metadataService.js';
 import { compressImage } from './compressionService.js';
-import { findDuplicate, type DuplicateMatch } from './duplicateService.js';
 
 export interface UploadInput {
   buffer: Buffer;
@@ -19,7 +18,6 @@ export interface UploadInput {
 
 export interface UploadOutcome {
   file: typeof files.$inferSelect;
-  duplicate: DuplicateMatch | null;
   compression: {
     originalSize: number;
     compressedSize: number;
@@ -36,7 +34,6 @@ export async function processUpload(input: UploadInput): Promise<UploadOutcome> 
   }
 
   const hash = computeHash(input.buffer);
-  const duplicate = await findDuplicate(hash); // warn-but-allow: never throws/blocks
 
   const mimeType = validation.detectedMime || input.claimedMimeType;
   const metadata = await extractMetadata(input.buffer, mimeType);
@@ -92,7 +89,6 @@ export async function processUpload(input: UploadInput): Promise<UploadOutcome> 
 
   return {
     file: fileRow,
-    duplicate,
     compression: {
       originalSize: input.buffer.length,
       compressedSize: outBuffer.length,
