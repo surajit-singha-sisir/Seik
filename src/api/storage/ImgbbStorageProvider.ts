@@ -24,12 +24,30 @@ export class ImgbbStorageProvider implements StorageProvider {
       form.append('expiration', String(options.expirationSeconds));
     }
 
-    const { data } = await axios.post(IMGBB_API_URL, form, {
-      params: { key: this.apiKey },
-    });
+    let data;
+    try {
+      const response = await axios.post(IMGBB_API_URL, form, {
+        params: { key: this.apiKey },
+      });
+      data = response.data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error('[imgbb] axios error:', {
+          message: err.message,
+          status: err.response?.status,
+          responseData: err.response?.data,
+        });
+      } else {
+        console.error('[imgbb] non-axios error:', err);
+      }
+      throw err;
+    }
 
     const result = data?.data;
-    if (!result) throw new Error('ImgBB upload failed: no data returned');
+    if (!result) {
+      console.error('[imgbb] unexpected response shape:', data);
+      throw new Error('ImgBB upload failed: no data returned');
+    }
 
     return {
       storageKey: result.id,
