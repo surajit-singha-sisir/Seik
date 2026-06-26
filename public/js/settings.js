@@ -271,8 +271,8 @@ $('restart-btn').addEventListener('click', async () => {
   try {
     await fetch('/api/settings/restart', { method: 'POST' });
   } catch { /* expected — server is going down */ }
-  showToast('Server restarting… reconnecting in 4s', 'warn');
-  setTimeout(() => window.location.reload(), 4000);
+  showToast('Server restarting… reconnecting in 6s', 'warn');
+  setTimeout(() => window.location.reload(), 6000);
 });
 
 // ── Init ──────────────────────────────────────────────────

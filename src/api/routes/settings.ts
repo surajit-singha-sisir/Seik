@@ -199,16 +199,28 @@ router.post('/password', async (req, res) => {
   }
 });
 
-/** POST /api/settings/restart — gracefully exits the process.
- * Only brings the server back up if it's running under a process
- * supervisor that restarts on exit (e.g. `tsx watch`, nodemon, pm2,
- * Docker --restart, systemd). Plain `node dist/server.js` will NOT
- * come back on its own. */
+/** POST /api/settings/restart — triggers a tsx watch restart by touching
+ * server.ts (updating its mtime). tsx watch sees the file change and
+ * restarts the process automatically. Works in dev (tsx watch) without
+ * killing the server permanently. In production (plain node) it's a no-op
+ * file touch — harmless, but won't restart anything without a process manager. */
 router.post('/restart', async (_req, res) => {
   res.json({ ok: true, message: 'Server is restarting…' });
-  setTimeout(() => {
-    console.log('[settings] Restart requested from Settings page — exiting process.');
-    process.exit(0);
+  setTimeout(async () => {
+    try {
+      // Touch src/server.ts so tsx watch detects a change and restarts
+      const { utimes } = await import('node:fs/promises');
+      const serverPath = new URL('../../server.ts', import.meta.url).pathname
+        .replace(/^\/([A-Z]:)/, '$1'); // fix Windows path: /C:/... → C:/...
+      const now = new Date();
+      await utimes(serverPath, now, now);
+      console.log('[settings] Touched server.ts — tsx watch will restart now.');
+    } catch (err) {
+      // Fallback: if touch fails (e.g. in production dist), just exit and
+      // rely on the process manager (pm2, Docker, systemd) to bring it back.
+      console.error('[settings] Touch failed, falling back to process.exit:', err);
+      process.exit(0);
+    }
   }, 300);
 });
 
