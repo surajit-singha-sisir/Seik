@@ -48,17 +48,23 @@ app.use(
 );
 
 // ── Session store ─────────────────────────────────────────
+const PgSession = connectPgSimple(session);
 app.use(
   session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: 'session',
+      createTableIfMissing: true,
+    }),
     name: 'seik.sid',
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,                   // JS cannot read cookie
-      sameSite: 'strict',               // CSRF protection
-      secure: isProd,                   // HTTPS only in production
-      maxAge: 8 * 60 * 60 * 1000,      // 8-hour session
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isProd,
+      maxAge: 8 * 60 * 60 * 1000,
     },
   }),
 );

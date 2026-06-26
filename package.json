@@ -25,6 +25,7 @@
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.5",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
@@ -45,6 +46,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
+    "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.1",
