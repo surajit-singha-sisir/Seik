@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, tags, fileTags } from '../../database/index.js';
+import { db, tags, fileTags, files } from '../../database/index.js';
 import { desc, eq, count } from 'drizzle-orm';
 
 const router = Router();
@@ -33,6 +33,31 @@ router.get('/', async (_req, res) => {
   } catch (err) {
     console.error('[tags]', err);
     res.status(500).json({ error: 'Failed to load tags.' });
+  }
+});
+
+/** GET /api/tags/:id — tag details + the files tagged with it */
+router.get('/:id', async (req, res) => {
+  try {
+    const [tag] = await db.select().from(tags).where(eq(tags.id, req.params.id));
+    if (!tag) return res.status(404).json({ error: 'Tag not found.' });
+
+    const fileRows = await db
+      .select({
+        id: files.id, filename: files.filename, mimeType: files.mimeType,
+        size: files.size, width: files.width, height: files.height,
+        thumbUrl: files.thumbUrl, imgbbUrl: files.imgbbUrl, viewerUrl: files.viewerUrl,
+        favorite: files.favorite, createdAt: files.createdAt,
+      })
+      .from(fileTags)
+      .innerJoin(files, eq(files.id, fileTags.fileId))
+      .where(eq(fileTags.tagId, req.params.id))
+      .orderBy(desc(files.createdAt));
+
+    res.json({ ...tag, files: fileRows });
+  } catch (err) {
+    console.error('[tags/get]', err);
+    res.status(500).json({ error: 'Failed to load tag.' });
   }
 });
 

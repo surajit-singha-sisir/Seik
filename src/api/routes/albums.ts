@@ -25,6 +25,30 @@ router.get('/', async (_req, res) => {
   }
 });
 
+/** GET /api/albums/:id — album details + the files inside it */
+router.get('/:id', async (req, res) => {
+  try {
+    const [album] = await db.select().from(albums).where(eq(albums.id, req.params.id));
+    if (!album) return res.status(404).json({ error: 'Album not found.' });
+
+    const fileRows = await db
+      .select({
+        id: files.id, filename: files.filename, mimeType: files.mimeType,
+        size: files.size, width: files.width, height: files.height,
+        thumbUrl: files.thumbUrl, imgbbUrl: files.imgbbUrl, viewerUrl: files.viewerUrl,
+        favorite: files.favorite, createdAt: files.createdAt,
+      })
+      .from(files)
+      .where(eq(files.albumId, req.params.id))
+      .orderBy(desc(files.createdAt));
+
+    res.json({ ...album, files: fileRows });
+  } catch (err) {
+    console.error('[albums/get]', err);
+    res.status(500).json({ error: 'Failed to load album.' });
+  }
+});
+
 /** POST /api/albums */
 router.post('/', async (req, res) => {
   try {

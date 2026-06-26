@@ -36,9 +36,14 @@ function fmtDate(iso) {
 let allTags = [];
 const tagsGrid   = document.getElementById('tags-grid');
 const emptyEl    = document.getElementById('tags-empty');
-const tagInput   = document.getElementById('tag-input');
 const searchEl   = document.getElementById('tags-search');
 const sortSelect = document.getElementById('sort-select');
+
+// Modal (create)
+const modal       = document.getElementById('modal');
+const modalTitle  = document.getElementById('modal-title');
+const tagNameInput= document.getElementById('tag-name');
+const btnSave     = document.getElementById('btn-save');
 
 // ── Load ──────────────────────────────────────────────────
 async function loadTags() {
@@ -181,13 +186,24 @@ async function deleteTag(t) {
   }
 }
 
-// ── Create ────────────────────────────────────────────────
-async function addTag() {
-  const name = tagInput.value.trim();
-  if (!name) return;
+// ── Create (via modal) ────────────────────────────────────
+function openCreate() {
+  modalTitle.textContent = 'New tag';
+  btnSave.textContent = 'Create';
+  tagNameInput.value = '';
+  modal.hidden = false;
+  tagNameInput.focus();
+}
 
-  const btn = document.getElementById('btn-add-tag');
-  btn.disabled = true;
+function closeModal() {
+  modal.hidden = true;
+}
+
+btnSave.addEventListener('click', async () => {
+  const name = tagNameInput.value.trim();
+  if (!name) { tagNameInput.focus(); return; }
+
+  btnSave.disabled = true;
   try {
     const res = await fetch('/api/tags', {
       method: 'POST',
@@ -197,16 +213,24 @@ async function addTag() {
     const data = await res.json();
     if (res.status === 409) { showToast('Tag already exists', 'warn'); return; }
     if (!res.ok) { showToast(data.error || 'Failed', 'fail'); return; }
-    tagInput.value = '';
+    closeModal();
     showToast(`Tag "${data.name}" created`);
     await loadTags();
+  } catch {
+    showToast('Network error', 'fail');
   } finally {
-    btn.disabled = false;
+    btnSave.disabled = false;
   }
-}
+});
 
-document.getElementById('btn-add-tag').addEventListener('click', addTag);
-tagInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTag(); });
+document.getElementById('btn-new-tag').addEventListener('click', openCreate);
+document.getElementById('empty-cta').addEventListener('click', e => { e.preventDefault(); openCreate(); });
+document.getElementById('btn-cancel').addEventListener('click', closeModal);
+document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+tagNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') btnSave.click(); });
+
 searchEl.addEventListener('input', renderTags);
 sortSelect.addEventListener('change', renderTags);
 
