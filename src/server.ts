@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const helmetFn = (helmet as any).default ?? helmet;
 import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
@@ -27,7 +29,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
 // ── Security headers ──────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmetFn({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '2mb' }));
