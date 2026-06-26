@@ -10,10 +10,5 @@ body{
   font-family:'Inter',system-ui,sans-serif;
 }
 a{ color:var(--accent); text-decoration:none; }
-.filmstrip{
-  height:18px; width:100%; flex-shrink:0;
-  background:repeating-linear-gradient(90deg, transparent 0 10px, var(--line) 10px 12px);
-  background-color:var(--ink-2);
-}
 button{ font-family:inherit; cursor:pointer; }
 .mono{ font-family:'JetBrains Mono',monospace; }

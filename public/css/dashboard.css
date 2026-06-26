@@ -208,6 +208,8 @@
   .lb-img{ max-height:calc(100vh - 7.5rem); max-width:96vw; }
   .lb-meta{ bottom:5.5rem; font-size:.68rem; }
   .lb-actions{ bottom:4.25rem; }
+  /* Ensure any page's main content area clears the bottom nav */
+  main, .upload-wrap, .page-main{ padding-bottom:5rem !important; }
 }
 
 /* ── Bottom Nav (mobile only) ────────────────────────────── */
