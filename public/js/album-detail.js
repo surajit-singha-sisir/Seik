@@ -100,15 +100,40 @@ async function toggleFav(f) {
 
 // ── QR modal ──────────────────────────────────────────────
 function openQRModal(f) {
-  const qrModal = document.getElementById('qr-modal');
-  const img     = document.getElementById('qr-img');
-  const link    = document.getElementById('qr-link');
-  img.src  = `/api/qr/${f.id}?format=svg`;
-  img.style.width = '220px'; img.style.borderRadius = '10px';
-  link.href = `/api/qr/${f.id}?format=png`;
-  link.textContent = 'Download PNG';
+  const qrModal   = document.getElementById('qr-modal');
+  const wrap      = document.getElementById('qr-canvas-wrap');
+  const link      = document.getElementById('qr-link');
+  const publicUrl = f.viewerUrl || f.imgbbUrl;
+
+  wrap.innerHTML = '';
+  link.style.display = 'none';
   document.getElementById('qr-filename').textContent = f.filename;
   qrModal.hidden = false;
+
+  if (!publicUrl) {
+    wrap.innerHTML = '<span style="color:#888;font-size:.8rem">No public URL</span>';
+    showToast('This file has no public URL for a QR code', 'fail');
+    return;
+  }
+
+  try {
+    new QRCode(wrap, {
+      text: publicUrl, width: 196, height: 196,
+      colorDark: '#0B0E14', colorLight: '#EDEAE3',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+    setTimeout(() => {
+      const canvas = wrap.querySelector('canvas');
+      if (canvas) {
+        link.href = canvas.toDataURL('image/png');
+        link.download = `qr-${f.filename}.png`;
+        link.style.display = '';
+      }
+    }, 100);
+  } catch {
+    wrap.innerHTML = '<span style="color:#888;font-size:.8rem">QR generation failed</span>';
+    showToast('QR generation failed', 'fail');
+  }
 }
 document.getElementById('qr-modal-close').addEventListener('click', () => {
   document.getElementById('qr-modal').hidden = true;
@@ -118,41 +143,40 @@ document.getElementById('qr-modal').addEventListener('click', e => {
 });
 
 // ── Info / EXIF panel ─────────────────────────────────────
-async function openInfoPanel(f) {
-  const panel = document.getElementById('info-panel');
-  document.getElementById('info-loading').hidden = false;
-  document.getElementById('info-content').innerHTML = '';
+function openInfoPanel(f) {
+  const panel     = document.getElementById('info-panel');
+  const loadingEl = document.getElementById('info-loading');
+  const contentEl = document.getElementById('info-content');
+
+  loadingEl.hidden = false;
+  contentEl.innerHTML = '';
   panel.hidden = false;
-  try {
-    const res  = await fetch(`/api/files/${f.id}`);
-    const data = await res.json();
-    document.getElementById('info-loading').hidden = true;
-    const rows = [
-      ['Filename', escHtml(data.filename)],
-      ['Type',     data.mimeType],
-      ['Size',     fmtSize(data.size)],
-      ['Dimensions', data.width && data.height ? `${data.width} × ${data.height} px` : '—'],
-      ['Uploaded', fmtDate(data.createdAt)],
-      ['Favourite', data.favorite ? 'Yes' : 'No'],
-    ];
-    if (data.metadataJson?.exif) {
-      const ex = data.metadataJson.exif;
-      if (ex.camera)   rows.push(['Camera', escHtml(ex.camera)]);
-      if (ex.lens)     rows.push(['Lens', escHtml(ex.lens)]);
-      if (ex.iso)      rows.push(['ISO', ex.iso]);
-      if (ex.exposure) rows.push(['Exposure', ex.exposure]);
-      if (ex.gps?.latitude) rows.push(['GPS', `${ex.gps.latitude.toFixed(5)}, ${ex.gps.longitude.toFixed(5)}`]);
-    }
-    document.getElementById('info-content').innerHTML = rows.map(([k,v]) =>
-      `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
-    ).join('');
-    document.getElementById('info-copy').onclick = () => copyLink(f);
-    document.getElementById('info-dl').onclick   = () => downloadFile(f);
-    document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
-  } catch {
-    document.getElementById('info-loading').hidden = true;
-    document.getElementById('info-content').innerHTML = '<p style="color:var(--fail);padding:.5rem">Failed to load details.</p>';
+
+  const rows = [
+    ['Filename',   escHtml(f.filename)],
+    ['Type',       escHtml(f.mimeType || '—')],
+    ['Size',       fmtSize(f.size)],
+    ['Dimensions', f.width && f.height ? `${f.width} × ${f.height} px` : '—'],
+    ['Uploaded',   fmtDate(f.createdAt)],
+    ['Favourite',  f.favorite ? '♥ Yes' : 'No'],
+  ];
+  if (f.metadataJson?.exif) {
+    const ex = f.metadataJson.exif;
+    if (ex.camera)          rows.push(['Camera',   escHtml(String(ex.camera))]);
+    if (ex.lens)            rows.push(['Lens',     escHtml(String(ex.lens))]);
+    if (ex.iso != null)     rows.push(['ISO',      String(ex.iso)]);
+    if (ex.exposure)        rows.push(['Exposure', escHtml(String(ex.exposure))]);
+    if (ex.gps?.latitude != null)
+      rows.push(['GPS', `${Number(ex.gps.latitude).toFixed(5)}, ${Number(ex.gps.longitude).toFixed(5)}`]);
   }
+  contentEl.innerHTML = rows.map(([k, v]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
+  ).join('');
+  loadingEl.hidden = true;
+
+  document.getElementById('info-copy').onclick = () => copyLink(f);
+  document.getElementById('info-dl').onclick   = () => downloadFile(f);
+  document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
 }
 document.getElementById('info-panel-close').addEventListener('click', () => {
   document.getElementById('info-panel').hidden = true;

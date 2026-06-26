@@ -198,44 +198,47 @@ async function toggleFav(f) {
 
 // ── QR modal ──────────────────────────────────────────────
 function openQRModal(f) {
-  const modal = document.getElementById('qr-modal');
-  const img   = document.getElementById('qr-img');
-  const link  = document.getElementById('qr-link');
-
+  const modal   = document.getElementById('qr-modal');
+  const wrap    = document.getElementById('qr-canvas-wrap');
+  const link    = document.getElementById('qr-link');
   const publicUrl = f.viewerUrl || f.imgbbUrl;
 
-  // Reset state
-  img.src = '';
-  img.style.cssText = 'width:220px;height:220px;border-radius:10px;object-fit:contain;display:block;';
-  img.alt = 'QR Code';
+  // Reset
+  wrap.innerHTML = '';
   link.style.display = 'none';
   document.getElementById('qr-filename').textContent = f.filename;
   modal.hidden = false;
 
   if (!publicUrl) {
-    img.alt = 'No public URL available';
-    img.style.cssText += 'opacity:.3;';
+    wrap.innerHTML = '<span style="color:#888;font-size:.8rem">No public URL</span>';
     showToast('This file has no public URL for a QR code', 'fail');
     return;
   }
 
-  // Use the dataurl endpoint — avoids SVG <img> sizing bug
-  fetch(`/api/qr/${f.id}?format=dataurl`)
-    .then(res => {
-      if (!res.ok) throw new Error(`${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      img.src = data.dataUrl;
-      link.href = `/api/qr/${f.id}?format=png`;
-      link.download = `qr-${f.filename}.png`;
-      link.style.display = '';
-    })
-    .catch(err => {
-      img.alt = 'QR generation failed';
-      img.style.cssText += 'opacity:.3;';
-      showToast(`QR failed (${err.message}) — file record may be missing`, 'fail');
+  // Generate entirely client-side — no API call needed
+  try {
+    new QRCode(wrap, {
+      text:         publicUrl,
+      width:        196,
+      height:       196,
+      colorDark:    '#0B0E14',
+      colorLight:   '#EDEAE3',
+      correctLevel: QRCode.CorrectLevel.M,
     });
+
+    // Make the Download PNG button work from the canvas QRCode renders
+    setTimeout(() => {
+      const canvas = wrap.querySelector('canvas');
+      if (canvas) {
+        link.href     = canvas.toDataURL('image/png');
+        link.download = `qr-${f.filename}.png`;
+        link.style.display = '';
+      }
+    }, 100);
+  } catch (err) {
+    wrap.innerHTML = '<span style="color:#888;font-size:.8rem">QR generation failed</span>';
+    showToast('QR generation failed', 'fail');
+  }
 }
 document.getElementById('qr-modal-close').addEventListener('click', () => {
   document.getElementById('qr-modal').hidden = true;
