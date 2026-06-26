@@ -1,0 +1,49 @@
+:root{
+  --ink:#0B0E14; --paper:#EDEAE3; --accent:#FF7A45; --ok:#3FA796; --line:rgba(237,234,227,.14);
+}
+*{box-sizing:border-box}
+.seik-body{
+  margin:0; min-height:100vh; background:var(--ink); color:var(--paper);
+  font-family:'Inter',system-ui,sans-serif;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.filmstrip{
+  height:18px; width:100%; flex-shrink:0;
+  background:repeating-linear-gradient(90deg, transparent 0 10px, var(--line) 10px 12px);
+  background-color:#05060a;
+}
+.seik-main{ max-width:720px; margin:0 auto; padding:4rem 1.5rem; width:100%; }
+.seik-header{ text-align:center; margin-bottom:2.5rem; }
+.seik-mark{ font-size:1.75rem; color:var(--accent); display:inline-block; margin-bottom:.75rem; }
+.seik-title{
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:2.75rem;
+  letter-spacing:-0.02em; margin:0;
+}
+.seik-sub{ color:rgba(237,234,227,.6); margin:.4rem 0 0; font-size:.95rem; }
+
+.seik-card{
+  border:1px solid var(--line); border-radius:12px; padding:1rem 1.25rem;
+  margin-bottom:2rem; display:flex; align-items:center; justify-content:space-between;
+  background:rgba(255,255,255,.02);
+}
+.seik-card-row{ display:flex; align-items:center; gap:.6rem; font-size:.95rem; }
+.dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.dot-pending{ background:#a3a3a3; }
+.dot-ok{ background:var(--ok); box-shadow:0 0 0 4px rgba(63,167,150,.15); }
+.dot-fail{ background:#e2574c; box-shadow:0 0 0 4px rgba(226,87,76,.15); }
+.seik-meta{
+  font-family:'JetBrains Mono',monospace; font-size:.78rem; color:rgba(237,234,227,.45);
+}
+.seik-grid{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:1px;
+  border:1px solid var(--line); border-radius:14px; overflow:hidden;
+}
+@media (min-width:560px){ .seik-grid{ grid-template-columns:repeat(4,1fr); } }
+.seik-tile{
+  background:rgba(255,255,255,.02); padding:1.25rem 1rem; text-align:center;
+  border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+}
+.seik-tile i{ font-size:1.1rem; color:var(--accent); }
+.seik-tile.pending i{ color:rgba(237,234,227,.35); }
+.seik-tile h2{ font-size:.85rem; font-weight:500; margin:.6rem 0 .2rem; }
+.seik-tile p{ font-size:.75rem; color:rgba(237,234,227,.5); margin:0; }
