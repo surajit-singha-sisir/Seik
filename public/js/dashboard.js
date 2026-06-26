@@ -201,12 +201,34 @@ function openQRModal(f) {
   const modal = document.getElementById('qr-modal');
   const img   = document.getElementById('qr-img');
   const link  = document.getElementById('qr-link');
-  img.src  = `/api/qr/${f.id}?format=svg`;
-  img.style.width = '220px'; img.style.borderRadius = '10px';
-  link.href = `/api/qr/${f.id}?format=png`;
-  link.textContent = 'Download PNG';
+
+  // Reset state
+  img.src = '';
+  img.style.cssText = 'width:220px;height:220px;border-radius:10px;object-fit:contain;display:block;';
+  img.alt = 'QR Code';
+  link.style.display = 'none';
   document.getElementById('qr-filename').textContent = f.filename;
+
+  // Show modal first so user sees loading state
   modal.hidden = false;
+
+  // Load QR via dataurl to get inline base64 — avoids SVG <img> sizing bug
+  fetch(`/api/qr/${f.id}?format=dataurl`)
+    .then(res => {
+      if (!res.ok) throw new Error(`QR fetch failed: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      img.src = data.dataUrl;
+      link.href = `/api/qr/${f.id}?format=png`;
+      link.download = `qr-${f.filename}.png`;
+      link.style.display = '';
+    })
+    .catch(() => {
+      img.alt = 'QR generation failed';
+      img.style.cssText += 'opacity:.4;';
+      showToast('QR code unavailable — file may have no public URL', 'fail');
+    });
 }
 document.getElementById('qr-modal-close').addEventListener('click', () => {
   document.getElementById('qr-modal').hidden = true;
