@@ -41,19 +41,125 @@ function showToast(msg, type = '') {
 const lightbox = document.getElementById('lightbox');
 const lbImg = document.getElementById('lb-img');
 const lbMeta = document.getElementById('lb-meta');
+let lbCurrentFile = null;
 document.getElementById('lb-close').addEventListener('click', closeLb);
 lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLb(); });
 function openLb(f) {
+  lbCurrentFile = f;
   lbImg.src = f.imgbbUrl || f.viewerUrl;
   lbImg.alt = f.filename;
   const d = f.width && f.height ? ` · ${f.width}×${f.height}` : '';
   lbMeta.textContent = `${f.filename} · ${fmtSize(f.size)}${d}`;
+
+  document.getElementById('lb-copy').onclick     = () => copyLink(f);
+  document.getElementById('lb-download').onclick = () => downloadFile(f);
+  document.getElementById('lb-fav').onclick      = () => toggleFav(f);
+  document.getElementById('lb-qr').onclick       = () => openQRModal(f);
+  document.getElementById('lb-info').onclick     = () => openInfoPanel(f);
+
   lightbox.hidden = false;
   document.body.style.overflow = 'hidden';
 }
 function closeLb() {
-  lightbox.hidden = true; lbImg.src = ''; document.body.style.overflow = '';
+  lightbox.hidden = true; lbImg.src = ''; document.body.style.overflow = ''; lbCurrentFile = null;
 }
+
+// ── Copy link ─────────────────────────────────────────────
+async function copyLink(f) {
+  const url = f.viewerUrl || f.imgbbUrl;
+  if (!url) { showToast('No public URL', 'fail'); return; }
+  try { await navigator.clipboard.writeText(url); showToast('Link copied!'); }
+  catch { showToast('Copy failed', 'fail'); }
+}
+
+// ── Download ──────────────────────────────────────────────
+function downloadFile(f) {
+  const url = f.imgbbUrl || f.viewerUrl;
+  if (!url) { showToast('No downloadable URL', 'fail'); return; }
+  const a = document.createElement('a');
+  a.href = url; a.download = f.filename; a.target = '_blank';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ── Favourite toggle ──────────────────────────────────────
+async function toggleFav(f) {
+  const newVal = !f.favorite;
+  try {
+    const res = await fetch(`/api/files/${f.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ favorite: newVal }),
+    });
+    if (!res.ok) { showToast('Update failed', 'fail'); return; }
+    f.favorite = newVal;
+    const btn = document.getElementById('lb-fav');
+    btn.querySelector('i').className = `fa-${newVal ? 'solid' : 'regular'} fa-heart`;
+    btn.classList.toggle('active-fav', newVal);
+    showToast(newVal ? 'Added to favourites' : 'Removed from favourites');
+  } catch { showToast('Network error', 'fail'); }
+}
+
+// ── QR modal ──────────────────────────────────────────────
+function openQRModal(f) {
+  const qrModal = document.getElementById('qr-modal');
+  const img     = document.getElementById('qr-img');
+  const link    = document.getElementById('qr-link');
+  img.src  = `/api/qr/${f.id}?format=svg`;
+  img.style.width = '220px'; img.style.borderRadius = '10px';
+  link.href = `/api/qr/${f.id}?format=png`;
+  link.textContent = 'Download PNG';
+  document.getElementById('qr-filename').textContent = f.filename;
+  qrModal.hidden = false;
+}
+document.getElementById('qr-modal-close').addEventListener('click', () => {
+  document.getElementById('qr-modal').hidden = true;
+});
+document.getElementById('qr-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('qr-modal')) document.getElementById('qr-modal').hidden = true;
+});
+
+// ── Info / EXIF panel ─────────────────────────────────────
+async function openInfoPanel(f) {
+  const panel = document.getElementById('info-panel');
+  document.getElementById('info-loading').hidden = false;
+  document.getElementById('info-content').innerHTML = '';
+  panel.hidden = false;
+  try {
+    const res  = await fetch(`/api/files/${f.id}`);
+    const data = await res.json();
+    document.getElementById('info-loading').hidden = true;
+    const rows = [
+      ['Filename', escHtml(data.filename)],
+      ['Type',     data.mimeType],
+      ['Size',     fmtSize(data.size)],
+      ['Dimensions', data.width && data.height ? `${data.width} × ${data.height} px` : '—'],
+      ['Uploaded', fmtDate(data.createdAt)],
+      ['Favourite', data.favorite ? 'Yes' : 'No'],
+    ];
+    if (data.metadataJson?.exif) {
+      const ex = data.metadataJson.exif;
+      if (ex.camera)   rows.push(['Camera', escHtml(ex.camera)]);
+      if (ex.lens)     rows.push(['Lens', escHtml(ex.lens)]);
+      if (ex.iso)      rows.push(['ISO', ex.iso]);
+      if (ex.exposure) rows.push(['Exposure', ex.exposure]);
+      if (ex.gps?.latitude) rows.push(['GPS', `${ex.gps.latitude.toFixed(5)}, ${ex.gps.longitude.toFixed(5)}`]);
+    }
+    document.getElementById('info-content').innerHTML = rows.map(([k,v]) =>
+      `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
+    ).join('');
+    document.getElementById('info-copy').onclick = () => copyLink(f);
+    document.getElementById('info-dl').onclick   = () => downloadFile(f);
+    document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
+  } catch {
+    document.getElementById('info-loading').hidden = true;
+    document.getElementById('info-content').innerHTML = '<p style="color:var(--fail);padding:.5rem">Failed to load details.</p>';
+  }
+}
+document.getElementById('info-panel-close').addEventListener('click', () => {
+  document.getElementById('info-panel').hidden = true;
+});
+document.getElementById('info-panel').addEventListener('click', e => {
+  if (e.target === document.getElementById('info-panel')) document.getElementById('info-panel').hidden = true;
+});
 
 function iconThumb(mime) {
   const d = document.createElement('div'); d.className = 'g-thumb-icon';

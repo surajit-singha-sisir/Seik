@@ -109,6 +109,45 @@
     <button class="lb-close" id="lb-close"><i class="fa-solid fa-xmark"></i></button>
     <img class="lb-img" id="lb-img" src="" alt="" />
     <div class="lb-meta" id="lb-meta"></div>
+    <div class="lb-actions">
+      <button class="lb-act-btn" id="lb-copy" title="Copy link"><i class="fa-solid fa-link"></i></button>
+      <button class="lb-act-btn" id="lb-download" title="Download"><i class="fa-solid fa-download"></i></button>
+      <button class="lb-act-btn" id="lb-fav" title="Favourite"><i class="fa-regular fa-heart"></i></button>
+      <button class="lb-act-btn" id="lb-qr" title="QR code"><i class="fa-solid fa-qrcode"></i></button>
+      <button class="lb-act-btn" id="lb-info" title="File details"><i class="fa-solid fa-circle-info"></i></button>
+    </div>
+  </div>
+
+  <!-- QR Modal -->
+  <div class="modal-backdrop" id="qr-modal" hidden style="z-index:1100">
+    <div class="modal" style="align-items:center;text-align:center;gap:.75rem">
+      <div class="modal-header" style="width:100%">
+        <h3><i class="fa-solid fa-qrcode"></i> QR Code</h3>
+        <button class="modal-close" id="qr-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p id="qr-filename" style="font-size:.78rem;color:rgba(237,234,227,.45);max-width:280px;word-break:break-all"></p>
+      <img id="qr-img" src="" alt="QR Code" style="background:#EDEAE3;padding:12px;border-radius:10px" />
+      <a id="qr-link" class="btn btn-accent" download style="margin-top:.25rem"><i class="fa-solid fa-download"></i> Download PNG</a>
+    </div>
+  </div>
+
+  <!-- File info / EXIF panel -->
+  <div class="modal-backdrop" id="info-panel" hidden style="z-index:1100">
+    <div class="modal" style="width:420px;max-width:95vw">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-circle-info"></i> File details</h3>
+        <button class="modal-close" id="info-panel-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="info-loading" style="text-align:center;padding:1.5rem;color:rgba(237,234,227,.4)">
+        <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+      </div>
+      <div id="info-content"></div>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end">
+        <button class="btn" id="info-copy"><i class="fa-solid fa-link"></i> Copy link</button>
+        <button class="btn" id="info-qr"><i class="fa-solid fa-qrcode"></i> QR</button>
+        <button class="btn btn-accent" id="info-dl"><i class="fa-solid fa-download"></i> Download</button>
+      </div>
+    </div>
   </div>
 
   <!-- Edit album modal -->
