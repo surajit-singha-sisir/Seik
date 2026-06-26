@@ -11,6 +11,7 @@ import dashboardRouter from './api/routes/dashboard.js';
 import galleryRouter from './api/routes/gallery.js';
 import albumsRouter from './api/routes/albums.js';
 import tagsRouter from './api/routes/tags.js';
+import filesRouter from './api/routes/files.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,9 +40,18 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/gallery', galleryRouter);
 app.use('/api/albums', albumsRouter);
 app.use('/api/tags', tagsRouter);
+app.use('/api/files', filesRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });
+});
+
+// ── Dynamic, DB-backed detail pages ────────────────────────
+app.get('/albums/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'album.html'));
+});
+app.get('/tags/:id', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'tag.html'));
 });
 
 app.listen(PORT, () => {
