@@ -74,6 +74,7 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
   const ip = getIP(req);
   const username = (req.body as { username?: string }).username ?? '';
   const password = (req.body as { password?: string }).password ?? '';
+  const nextFromBody = (req.body as { next?: string }).next;
 
   const { locked, remainingMs } = isLockedOut(ip);
   if (locked) {
@@ -110,7 +111,9 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
   req.session.authenticated = true;
   req.session.user = username.trim();
 
-  const next = (req.query['next'] as string | undefined) ?? '/';
+  // Only allow safe, same-site relative redirects (prevents open-redirect attacks)
+  const isSafeNext = typeof nextFromBody === 'string' && /^\/(?!\/)/.test(nextFromBody);
+  const next = isSafeNext ? nextFromBody : '/';
   res.json({ ok: true, redirect: next });
 }
 
