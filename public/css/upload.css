@@ -144,3 +144,74 @@
   transition:border-color .15s, color .15s;
 }
 .q-remove:hover{ border-color:var(--fail); color:var(--fail); }
+
+/* ── Duplicate warning modal ───────────────────────────── */
+.dup-modal-backdrop{
+  position:fixed; inset:0; background:rgba(5,6,10,.78); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  z-index:10000; padding:1rem;
+}
+.dup-modal-backdrop[hidden]{ display:none; }
+.dup-modal{
+  background:var(--ink-2); border:1px solid var(--line-strong); border-radius:16px;
+  width:100%; max-width:520px; max-height:80vh; display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.dup-modal-header{
+  display:flex; align-items:flex-start; gap:1rem;
+  padding:1.4rem 1.4rem 1rem; border-bottom:1px solid var(--line);
+}
+.dup-modal-icon{
+  font-size:1.5rem; color:var(--warn); margin-top:.15rem; flex-shrink:0;
+}
+.dup-modal-header h2{
+  font-family:'Space Grotesk',sans-serif; font-size:1rem; font-weight:700;
+  margin:0 0 .2rem; color:var(--paper);
+}
+.dup-modal-header p{
+  font-size:.8rem; color:rgba(237,234,227,.5); margin:0;
+}
+.dup-modal-list{
+  list-style:none; margin:0; padding:.6rem .8rem;
+  overflow-y:auto; flex:1;
+}
+.dup-modal-item{
+  display:flex; align-items:center; gap:.75rem;
+  padding:.55rem .6rem; border-radius:8px;
+  transition:background .12s;
+}
+.dup-modal-item:hover{ background:rgba(255,255,255,.04); }
+.dup-modal-thumb{
+  width:36px; height:36px; border-radius:6px; flex-shrink:0; overflow:hidden;
+  background:rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center;
+  color:rgba(237,234,227,.3); font-size:.9rem;
+}
+.dup-modal-thumb img{ width:100%; height:100%; object-fit:cover; }
+.dup-modal-info{ flex:1; min-width:0; }
+.dup-modal-name{
+  font-size:.82rem; font-weight:500; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; color:var(--paper);
+}
+.dup-modal-meta{
+  font-size:.7rem; color:rgba(237,234,227,.4);
+  font-family:'JetBrains Mono',monospace; margin-top:.1rem;
+}
+.dup-modal-match{
+  font-size:.65rem; font-family:'JetBrains Mono',monospace;
+  padding:.1rem .4rem; border-radius:4px;
+  background:rgba(232,179,57,.12); color:var(--warn);
+  flex-shrink:0;
+}
+.dup-modal-item-remove{
+  background:transparent; border:1px solid var(--line);
+  border-radius:6px; color:rgba(237,234,227,.35);
+  width:26px; height:26px; display:flex; align-items:center;
+  justify-content:center; font-size:.7rem; flex-shrink:0;
+  transition:border-color .12s, color .12s;
+}
+.dup-modal-item-remove:hover{ border-color:var(--fail); color:var(--fail); }
+.dup-modal-foot{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  gap:.6rem; padding:1rem 1.4rem; border-top:1px solid var(--line);
+}
+.dup-modal-foot-right{ display:flex; gap:.5rem; }

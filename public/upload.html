@@ -199,5 +199,30 @@
   </nav>
 
   <script src="/js/upload.js"></script>
+
+  <!-- Duplicate warning modal -->
+  <div class="dup-modal-backdrop" id="dup-modal-backdrop" hidden>
+    <div class="dup-modal" role="dialog" aria-modal="true" aria-labelledby="dup-modal-title">
+      <div class="dup-modal-header">
+        <i class="fa-solid fa-clone dup-modal-icon"></i>
+        <div>
+          <h2 id="dup-modal-title">Duplicate files detected</h2>
+          <p id="dup-modal-subtitle"></p>
+        </div>
+      </div>
+      <ul class="dup-modal-list" id="dup-modal-list"></ul>
+      <div class="dup-modal-foot">
+        <button type="button" class="btn" id="dup-modal-remove-all">
+          <i class="fa-solid fa-trash"></i> Remove all duplicates
+        </button>
+        <div class="dup-modal-foot-right">
+          <button type="button" class="btn" id="dup-modal-cancel">Cancel</button>
+          <button type="button" class="btn btn-accent" id="dup-modal-upload-all">
+            <i class="fa-solid fa-paper-plane"></i> Upload anyway
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
