@@ -8,6 +8,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import uploadsRouter from './api/routes/uploads.js';
 import dashboardRouter from './api/routes/dashboard.js';
+import galleryRouter from './api/routes/gallery.js';
+import albumsRouter from './api/routes/albums.js';
+import tagsRouter from './api/routes/tags.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +36,9 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/gallery', galleryRouter);
+app.use('/api/albums', albumsRouter);
+app.use('/api/tags', tagsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });

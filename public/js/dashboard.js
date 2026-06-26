@@ -62,7 +62,6 @@ function renderGallery(files) {
 
   if (!files || files.length === 0) {
     emptyEl.hidden = false;
-    gallery.appendChild(emptyEl);
     return;
   }
 
@@ -168,9 +167,8 @@ async function init() {
     console.error('[dashboard]', err);
     gallery.innerHTML = '';
     const emptyEl = document.getElementById('gallery-empty');
-    emptyEl.hidden = false;
     emptyEl.querySelector('p').textContent = 'Could not load files — is the server running?';
-    gallery.appendChild(emptyEl);
+    emptyEl.hidden = false;
     // Zero-out stats gracefully
     ['stat-files','stat-size','stat-albums','stat-saved'].forEach(id => {
       document.getElementById(id).textContent = '—';

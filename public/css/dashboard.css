@@ -87,7 +87,7 @@
   gap:.75rem;
 }
 .gallery-empty{
-  grid-column:1/-1; text-align:center; padding:4rem 1rem;
+  text-align:center; padding:4rem 1rem;
   color:rgba(237,234,227,.35);
 }
 .gallery-empty i{ font-size:2rem; margin-bottom:.75rem; display:block; }
@@ -118,9 +118,10 @@
 /* ── Lightbox ────────────────────────────────────────────── */
 .lightbox{
   position:fixed; inset:0; background:rgba(5,6,10,.92); z-index:999;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  flex-direction:column; align-items:center; justify-content:center;
   padding:2rem;
 }
+.lightbox:not([hidden]){ display:flex; }
 .lb-close{
   position:absolute; top:1.25rem; right:1.5rem; background:transparent;
   border:1px solid var(--line-strong); color:var(--paper); border-radius:8px;
