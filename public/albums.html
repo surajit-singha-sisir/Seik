@@ -10,46 +10,128 @@
 <link rel="stylesheet" href="/css/theme.css" />
 <link rel="stylesheet" href="/css/dashboard.css" />
 <style>
-.albums-grid{
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem;
+/* ── Albums grid ─────────────────────────────────────────── */
+.albums-toolbar {
+  display: flex; align-items: center; gap: .6rem; margin-bottom: 1.5rem; flex-wrap: wrap;
 }
-.album-card{
-  border:1px solid var(--line); border-radius:12px; padding:1.2rem 1.1rem;
-  background:rgba(255,255,255,.015); cursor:default;
-  display:flex; flex-direction:column; gap:.5rem;
-  transition:border-color .15s;
+.albums-search {
+  flex: 1; min-width: 160px; max-width: 300px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: .48rem .9rem; color: var(--paper);
+  font-size: .85rem; font-family: inherit; outline: none; transition: border-color .15s;
 }
-.album-card:hover{ border-color:rgba(255,122,69,.35); }
-.album-icon{ font-size:1.6rem; color:var(--accent); }
-.album-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:.95rem; }
-.album-meta{ font-size:.72rem; font-family:'JetBrains Mono',monospace; color:rgba(237,234,227,.4); }
-.album-actions{ display:flex; gap:.4rem; margin-top:.4rem; }
-.icon-btn{
-  border:1px solid var(--line-strong); background:transparent; color:rgba(237,234,227,.5);
-  border-radius:6px; width:28px; height:28px; display:flex; align-items:center;
-  justify-content:center; font-size:.75rem; cursor:pointer; transition:border-color .15s, color .15s;
-}
-.icon-btn:hover{ border-color:var(--fail); color:var(--fail); }
+.albums-search:focus { border-color: var(--accent); }
 
-/* Create modal */
-.modal-backdrop{
-  position:fixed; inset:0; background:rgba(5,6,10,.8); z-index:500;
-  display:flex; align-items:center; justify-content:center;
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
 }
-.modal-backdrop[hidden]{ display:none; }
-.modal{
-  background:var(--ink-2); border:1px solid var(--line-strong); border-radius:14px;
-  padding:1.75rem; width:360px; display:flex; flex-direction:column; gap:1rem;
+
+.album-card {
+  border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,.018);
+  display: flex; flex-direction: column;
+  transition: border-color .15s, transform .12s;
+  cursor: default;
 }
-.modal h3{ font-family:'Space Grotesk',sans-serif; margin:0; font-size:1rem; }
-.modal input, .modal textarea{
-  background:rgba(255,255,255,.04); border:1px solid var(--line-strong); border-radius:8px;
-  padding:.55rem .85rem; color:var(--paper); font-size:.875rem; font-family:inherit;
-  outline:none; width:100%; box-sizing:border-box;
+.album-card:hover { border-color: rgba(255,122,69,.3); transform: translateY(-2px); }
+.album-card.pinned { border-color: rgba(255,122,69,.45); }
+
+.album-cover {
+  height: 110px; background: rgba(255,255,255,.03);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; color: rgba(237,234,227,.15); overflow: hidden;
+  position: relative;
 }
-.modal input:focus, .modal textarea:focus{ border-color:var(--accent); }
-.modal textarea{ resize:vertical; min-height:72px; }
-.modal-actions{ display:flex; gap:.6rem; justify-content:flex-end; }
+.album-cover img { width: 100%; height: 100%; object-fit: cover; }
+.album-cover-icon { font-size: 2rem; color: var(--accent); opacity: .5; }
+.album-badges {
+  position: absolute; top: .5rem; right: .55rem;
+  display: flex; gap: .3rem;
+}
+.album-badge {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; backdrop-filter: blur(6px);
+}
+.badge-pin  { background: rgba(255,122,69,.35); color: var(--accent); }
+.badge-fav  { background: rgba(226,87,76,.3);   color: #f87171; }
+
+.album-body { padding: 1rem 1rem .8rem; flex: 1; display: flex; flex-direction: column; gap: .35rem; }
+.album-name {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.album-name-input {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: .95rem;
+  background: rgba(255,255,255,.07); border: 1px solid var(--accent);
+  border-radius: 6px; padding: .2rem .5rem; color: var(--paper);
+  outline: none; width: 100%; box-sizing: border-box;
+}
+.album-desc {
+  font-size: .73rem; color: rgba(237,234,227,.4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.album-meta {
+  font-size: .7rem; font-family: 'JetBrains Mono', monospace;
+  color: rgba(237,234,227,.35); margin-top: auto; padding-top: .35rem;
+  display: flex; gap: .6rem;
+}
+
+.album-actions { display: flex; gap: .35rem; padding: .6rem 1rem; border-top: 1px solid var(--line); }
+.icon-btn {
+  border: 1px solid var(--line-strong); background: transparent;
+  color: rgba(237,234,227,.45); border-radius: 7px;
+  width: 30px; height: 30px; display: flex; align-items: center;
+  justify-content: center; font-size: .75rem; cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  flex-shrink: 0;
+}
+.icon-btn:hover { border-color: rgba(237,234,227,.6); color: var(--paper); }
+.icon-btn.active-pin  { border-color: var(--accent); color: var(--accent); background: rgba(255,122,69,.1); }
+.icon-btn.active-fav  { border-color: #f87171; color: #f87171; background: rgba(248,113,113,.1); }
+.icon-btn.del-btn:hover { border-color: var(--fail); color: var(--fail); }
+.icon-btn.edit-btn:hover { border-color: var(--ok); color: var(--ok); }
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(5,6,10,.82); z-index: 500;
+  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 16px;
+  padding: 1.75rem; width: 380px; display: flex; flex-direction: column; gap: 1rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-family: 'Space Grotesk', sans-serif; margin: 0; font-size: 1rem; }
+.modal-close {
+  background: transparent; border: 1px solid var(--line-strong); border-radius: 7px;
+  color: rgba(237,234,227,.5); width: 28px; height: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: .8rem;
+  transition: border-color .15s, color .15s;
+}
+.modal-close:hover { border-color: var(--fail); color: var(--fail); }
+.modal input, .modal textarea {
+  background: rgba(255,255,255,.04); border: 1px solid var(--line-strong); border-radius: 8px;
+  padding: .55rem .85rem; color: var(--paper); font-size: .875rem; font-family: inherit;
+  outline: none; width: 100%; box-sizing: border-box; transition: border-color .15s;
+}
+.modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+.modal textarea { resize: vertical; min-height: 72px; }
+.modal-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+
+/* Section divider */
+.pinned-section-label {
+  font-size: .7rem; font-family: 'JetBrains Mono', monospace;
+  color: rgba(237,234,227,.3); text-transform: uppercase; letter-spacing: .08em;
+  margin: 1.25rem 0 .5rem; display: flex; align-items: center; gap: .5rem;
+}
+.pinned-section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
+}
 </style>
 </head>
 <body>
@@ -75,26 +157,38 @@
           <h1>Albums</h1>
           <p class="dash-sub" id="total-label">Loading…</p>
         </div>
-        <button class="btn btn-accent" id="btn-new-album"><i class="fa-solid fa-plus"></i> New album</button>
+        <button class="btn btn-accent" id="btn-new-album">
+          <i class="fa-solid fa-plus"></i> New album
+        </button>
       </header>
 
-      <div class="albums-grid" id="albums-grid"></div>
+      <div class="albums-toolbar">
+        <input type="search" class="albums-search" id="albums-search" placeholder="Search albums…" />
+        <span class="mono" style="font-size:.72rem;color:rgba(237,234,227,.3)" id="filter-hint"></span>
+      </div>
+
+      <div id="albums-container">
+        <div class="albums-grid" id="albums-grid"></div>
+      </div>
       <div class="gallery-empty" id="albums-empty" hidden>
         <i class="fa-solid fa-folder-open"></i>
-        <p>No albums yet. Create one to organise your files.</p>
+        <p>No albums yet. <a href="#" id="empty-cta">Create your first album.</a></p>
       </div>
     </main>
   </div>
 
-  <!-- Create album modal -->
+  <!-- Create / Edit album modal -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
-      <h3>New album</h3>
+      <div class="modal-header">
+        <h3 id="modal-title">New album</h3>
+        <button class="modal-close" id="btn-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
       <input type="text" id="album-name" placeholder="Album name" maxlength="80" />
       <textarea id="album-desc" placeholder="Description (optional)"></textarea>
       <div class="modal-actions">
         <button class="btn" id="btn-cancel">Cancel</button>
-        <button class="btn btn-accent" id="btn-create">Create</button>
+        <button class="btn btn-accent" id="btn-save">Create</button>
       </div>
     </div>
   </div>

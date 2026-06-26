@@ -4,6 +4,8 @@ import { processUpload } from '../services/uploadService.js';
 import { compressImage } from '../services/compressionService.js';
 import { validateUpload } from '../../utils/validateUpload.js';
 import { UploadError } from '../../utils/errors.js';
+import { db, fileTags, tags } from '../../database/index.js';
+import { inArray } from 'drizzle-orm';
 
 const MAX_BYTES = (Number(process.env.MAX_UPLOAD_SIZE_MB) || 32) * 1024 * 1024;
 
@@ -15,12 +17,30 @@ function handleUploadError(err: unknown, res: Response) {
   res.status(500).json({ error: 'Upload failed unexpectedly.' });
 }
 
-/** Handles file picker, drag & drop, folder upload, and clipboard paste —
- * they all arrive here as a single multipart file, the method only differs
- * client-side in how the File object was obtained. */
+/** Parse tag IDs from the request body (JSON array or comma-separated string) */
+function parseTagIds(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return raw.split(',').map(s => s.trim()).filter(Boolean); }
+  }
+  return [];
+}
+
+/** After inserting a file, attach tag join-rows */
+async function attachTags(fileId: string, tagIds: string[]) {
+  if (!tagIds.length) return;
+  // Verify the tag IDs actually exist to avoid FK errors
+  const existing = await db.select({ id: tags.id }).from(tags).where(inArray(tags.id, tagIds));
+  const validIds = existing.map(t => t.id);
+  if (!validIds.length) return;
+  await db.insert(fileTags).values(validIds.map(tagId => ({ fileId, tagId }))).onConflictDoNothing();
+}
+
 export async function uploadFile(req: Request, res: Response) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file provided.' });
+    const tagIds = parseTagIds(req.body.tagIds);
 
     const result = await processUpload({
       buffer: req.file.buffer,
@@ -30,15 +50,13 @@ export async function uploadFile(req: Request, res: Response) {
       albumId: req.body.albumId || null,
     });
 
+    await attachTags(result.file.id, tagIds);
     res.status(201).json(result);
   } catch (err) {
     handleUploadError(err, res);
   }
 }
 
-/** Preview endpoint — accepts a staged multipart file + quality value, runs
- * compression, and returns the projected size WITHOUT persisting anything.
- * The client calls this on each slider change to show live size estimates. */
 export async function previewCompression(req: Request, res: Response) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file provided.' });
@@ -47,14 +65,8 @@ export async function previewCompression(req: Request, res: Response) {
       req.body.quality ? Number(req.body.quality) : 85,
     )));
 
-    const validation = await validateUpload(
-      req.file.buffer,
-      req.file.originalname,
-      req.file.mimetype,
-    );
-    if (!validation.ok) {
-      return res.status(422).json({ error: validation.reason });
-    }
+    const validation = await validateUpload(req.file.buffer, req.file.originalname, req.file.mimetype);
+    if (!validation.ok) return res.status(422).json({ error: validation.reason });
 
     const mimeType = validation.detectedMime || req.file.mimetype;
     const { buffer: out, compressed } = await compressImage(req.file.buffer, mimeType, quality);
@@ -74,17 +86,16 @@ export async function previewCompression(req: Request, res: Response) {
   }
 }
 
-/** URL upload — fetches the remote file server-side, then runs it through
- * the exact same validation/compression/storage pipeline as a direct upload. */
 export async function uploadFromUrl(req: Request, res: Response) {
   try {
-    const { url, quality, albumId } = req.body as { url?: string; quality?: string; albumId?: string };
+    const { url, quality, albumId, tagIds: rawTagIds } = req.body as {
+      url?: string; quality?: string; albumId?: string; tagIds?: unknown;
+    };
     if (!url) return res.status(400).json({ error: 'url is required.' });
+    const tagIds = parseTagIds(rawTagIds);
 
     let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
+    try { parsed = new URL(url); } catch {
       return res.status(400).json({ error: 'That is not a valid URL.' });
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -92,9 +103,7 @@ export async function uploadFromUrl(req: Request, res: Response) {
     }
 
     const response = await axios.get<ArrayBuffer>(url, {
-      responseType: 'arraybuffer',
-      maxContentLength: MAX_BYTES,
-      timeout: 20_000,
+      responseType: 'arraybuffer', maxContentLength: MAX_BYTES, timeout: 20_000,
     });
 
     const buffer = Buffer.from(response.data);
@@ -102,13 +111,12 @@ export async function uploadFromUrl(req: Request, res: Response) {
     const claimedMimeType = (response.headers['content-type'] as string)?.split(';')[0] || 'application/octet-stream';
 
     const result = await processUpload({
-      buffer,
-      originalFilename: filename,
-      claimedMimeType,
+      buffer, originalFilename: filename, claimedMimeType,
       quality: quality ? Number(quality) : undefined,
       albumId: albumId || null,
     });
 
+    await attachTags(result.file.id, tagIds);
     res.status(201).json(result);
   } catch (err) {
     handleUploadError(err, res);

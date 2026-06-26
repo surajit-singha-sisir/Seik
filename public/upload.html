@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/theme.css" />
 <link rel="stylesheet" href="/css/dashboard.css" />
 <link rel="stylesheet" href="/css/upload.css" />
+<link rel="stylesheet" href="/css/upload-settings.css" />
 </head>
 <body>
   <div class="filmstrip" aria-hidden="true"></div>
@@ -46,12 +47,14 @@
 
           <!-- Dropzone -->
           <section class="dropzone" id="dropzone" tabindex="0">
-            <i class="fa-solid fa-cloud-arrow-up dz-icon"></i>
+            <div class="dz-gfx">
+              <i class="fa-solid fa-cloud-arrow-up dz-icon"></i>
+            </div>
             <p class="dz-title">Drag files here, paste, or browse</p>
-            <p class="dz-sub">All image formats, PDF, PSD, RAW, SVG…</p>
+            <p class="dz-sub">All image formats · PDF · PSD · RAW · SVG</p>
             <div class="dz-actions">
               <button type="button" class="btn btn-accent" id="btn-browse">
-                <i class="fa-solid fa-file"></i> Choose files
+                <i class="fa-solid fa-file-image"></i> Choose files
               </button>
               <button type="button" class="btn" id="btn-folder">
                 <i class="fa-solid fa-folder-open"></i> Folder
@@ -70,7 +73,7 @@
 
           <!-- Queue header -->
           <div class="queue-head" id="queue-head" hidden>
-            <span id="queue-count">0 files</span>
+            <span id="queue-count" class="mono">0 files</span>
             <div class="queue-head-actions">
               <button type="button" class="btn" id="btn-clear-done">
                 <i class="fa-solid fa-broom"></i> Clear done
@@ -87,16 +90,25 @@
 
         <!-- Right: upload settings -->
         <aside class="up-settings">
-          <p class="settings-title"><i class="fa-solid fa-sliders"></i> Upload settings</p>
+          <div class="settings-header">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Upload settings</span>
+          </div>
 
           <!-- Album picker -->
           <div class="setting-group">
             <label class="setting-label" for="album-select">
               <i class="fa-solid fa-folder-open"></i> Album
             </label>
-            <select id="album-select" class="setting-select">
-              <option value="">No album</option>
-            </select>
+            <div class="setting-select-wrap">
+              <select id="album-select" class="setting-select">
+                <option value="">No album</option>
+              </select>
+              <i class="fa-solid fa-chevron-down setting-select-icon"></i>
+            </div>
+            <a href="/albums.html" class="setting-link">
+              <i class="fa-solid fa-plus"></i> Manage albums
+            </a>
           </div>
 
           <!-- Tags picker -->
@@ -105,14 +117,17 @@
               <i class="fa-solid fa-tag"></i> Tags
             </label>
             <div class="tags-picker" id="tags-picker">
-              <span class="tags-placeholder">Loading…</span>
+              <span class="tags-placeholder"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</span>
             </div>
             <div class="new-tag-row">
-              <input type="text" id="new-tag-input" placeholder="New tag…" maxlength="40" />
-              <button type="button" class="btn" id="btn-new-tag">
+              <input type="text" id="new-tag-input" placeholder="Create new tag…" maxlength="40" />
+              <button type="button" class="btn btn-sm" id="btn-new-tag">
                 <i class="fa-solid fa-plus"></i>
               </button>
             </div>
+            <a href="/tags.html" class="setting-link">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Manage tags
+            </a>
           </div>
 
           <!-- Default quality -->
@@ -124,8 +139,21 @@
               <input type="range" min="1" max="100" value="85" id="global-quality" class="q-quality-slider" />
               <span class="q-quality-value mono" id="global-quality-label">85%</span>
             </div>
-            <p class="setting-hint">Applied to each file. Override per item in the queue.</p>
+            <p class="setting-hint">Applied to each file unless overridden per item.</p>
           </div>
+
+          <!-- Selected summary -->
+          <div class="setting-summary" id="setting-summary" hidden>
+            <div class="summary-row" id="summary-album-row" hidden>
+              <i class="fa-solid fa-folder-open"></i>
+              <span id="summary-album-name">—</span>
+            </div>
+            <div class="summary-row" id="summary-tags-row" hidden>
+              <i class="fa-solid fa-tags"></i>
+              <span id="summary-tags-list">—</span>
+            </div>
+          </div>
+
         </aside>
 
       </div><!-- .up-layout -->
@@ -139,16 +167,16 @@
       <div class="q-body">
         <div class="q-row1">
           <span class="q-name"></span>
-          <span class="q-status mono"></span>
+          <span class="q-badge"></span>
         </div>
         <div class="q-stats mono">
           <span class="q-original"></span>
-          <span class="q-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+          <span class="q-arrow"><i class="fa-solid fa-arrow-right-long"></i></span>
           <span class="q-compressed">—</span>
           <span class="q-reduction"></span>
         </div>
         <div class="q-quality-row">
-          <span class="q-quality-label">Quality</span>
+          <span class="q-quality-label mono">Q</span>
           <input type="range" min="1" max="100" value="85" class="q-quality-slider" />
           <span class="q-quality-value mono">85%</span>
         </div>

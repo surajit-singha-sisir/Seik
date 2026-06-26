@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, tags, fileTags, files } from '../../database/index.js';
+import { db, tags, fileTags } from '../../database/index.js';
 import { desc, eq, count } from 'drizzle-orm';
 
 const router = Router();
@@ -36,6 +36,25 @@ router.post('/', async (req, res) => {
     if (err?.code === '23505') return res.status(409).json({ error: 'Tag already exists.' });
     console.error('[tags/create]', err);
     res.status(500).json({ error: 'Failed to create tag.' });
+  }
+});
+
+/** PATCH /api/tags/:id */
+router.patch('/:id', async (req, res) => {
+  try {
+    const { name } = req.body as { name?: string };
+    if (!name?.trim()) return res.status(400).json({ error: 'name is required.' });
+    const slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const [row] = await db.update(tags)
+      .set({ name: name.trim(), slug })
+      .where(eq(tags.id, req.params.id))
+      .returning();
+    if (!row) return res.status(404).json({ error: 'Tag not found.' });
+    res.json(row);
+  } catch (err: any) {
+    if (err?.code === '23505') return res.status(409).json({ error: 'Tag name already exists.' });
+    console.error('[tags/patch]', err);
+    res.status(500).json({ error: 'Failed to update tag.' });
   }
 });
 
