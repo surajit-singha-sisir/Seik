@@ -29,6 +29,9 @@ const app  = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
+// Trust Vercel's proxy so secure cookies work over HTTPS
+if (isProd) app.set('trust proxy', 1);
+
 // ── Security headers ──────────────────────────────────────
 app.use(helmetFn({ contentSecurityPolicy: false }));
 app.use(cors());
@@ -60,9 +63,10 @@ app.use(
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
+    proxy: isProd,
     cookie: {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       secure: isProd,
       maxAge: 8 * 60 * 60 * 1000,
     },

@@ -113,8 +113,16 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
 
   // Only allow safe, same-site relative redirects (prevents open-redirect attacks)
   const isSafeNext = typeof nextFromBody === 'string' && /^\/(?!\/)/.test(nextFromBody);
-  const next = isSafeNext ? nextFromBody : '/';
-  res.json({ ok: true, redirect: next });
+  const redirectTo = isSafeNext ? nextFromBody : '/';
+
+  // Explicitly save session before responding so cookie is committed to DB
+  req.session.save((err) => {
+    if (err) {
+      res.status(500).json({ error: 'Session save failed.' });
+      return;
+    }
+    res.json({ ok: true, redirect: redirectTo });
+  });
 }
 
 // ── Logout handler (POST /auth/logout) ───────────────────
