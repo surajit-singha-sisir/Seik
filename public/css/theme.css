@@ -12,3 +12,26 @@ body{
 a{ color:var(--accent); text-decoration:none; }
 button{ font-family:inherit; cursor:pointer; }
 .mono{ font-family:'JetBrains Mono',monospace; }
+
+
+/* ── Logout button in sidebar ── */
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: rgba(237,234,227,.5);
+  font-size: .8rem;
+  padding: .5rem .75rem;
+  margin-bottom: .75rem;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.sidebar-logout:hover {
+  background: rgba(226,87,76,.12);
+  border-color: var(--fail);
+  color: var(--fail);
+}

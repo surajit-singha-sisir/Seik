@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -25,6 +25,7 @@
         <a href="/albums.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> Albums</a>
         <a href="/tags.html" class="nav-link"><i class="fa-solid fa-tag"></i> Tags</a>
       </nav>
+      <button class="sidebar-logout" id="logout-btn" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
       <div class="sidebar-foot mono" id="api-status">
         <span class="dot dot-pending"></span> checking…
       </div>
@@ -224,5 +225,15 @@
   </div>
 
   <script src="/js/upload.js"></script>
+<script>
+(function(){
+  const btn = document.getElementById('logout-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+})();
+</script>
 </body>
 </html>
