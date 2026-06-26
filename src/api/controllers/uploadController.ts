@@ -6,6 +6,7 @@ import { validateUpload } from '../../utils/validateUpload.js';
 import { UploadError } from '../../utils/errors.js';
 import { db, fileTags, tags } from '../../database/index.js';
 import { inArray } from 'drizzle-orm';
+import { findDuplicateByNameAndSize } from '../services/duplicateService.js';
 
 const MAX_BYTES = (Number(process.env.MAX_UPLOAD_SIZE_MB) || 32) * 1024 * 1024;
 
@@ -120,5 +121,25 @@ export async function uploadFromUrl(req: Request, res: Response) {
     res.status(201).json(result);
   } catch (err) {
     handleUploadError(err, res);
+  }
+}
+
+/** Pre-upload duplicate check — called by the client before spending bandwidth.
+ * Checks by original filename + declared file size (fast, no file buffer needed). */
+export async function checkDuplicate(req: Request, res: Response) {
+  try {
+    const { filename, size } = req.body as { filename?: string; size?: number };
+    if (!filename || size === undefined || size === null) {
+      return res.status(400).json({ error: 'filename and size are required.' });
+    }
+    const n = Number(size);
+    if (!Number.isFinite(n) || n < 0) {
+      return res.status(400).json({ error: 'size must be a non-negative number.' });
+    }
+    const duplicate = await findDuplicateByNameAndSize(filename, n);
+    res.json({ duplicate: duplicate ?? null });
+  } catch (err) {
+    console.error('[check-duplicate] error:', err);
+    res.status(500).json({ error: 'Duplicate check failed.' });
   }
 }
