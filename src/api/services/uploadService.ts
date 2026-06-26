@@ -65,6 +65,7 @@ export async function processUpload(input: UploadInput): Promise<UploadOutcome> 
       mimeType,
       extension: validation.extension,
       size: result.size ?? outBuffer.length,
+      originalSize: input.buffer.length,
       width: result.width ?? metadata.width,
       height: result.height ?? metadata.height,
       hash,

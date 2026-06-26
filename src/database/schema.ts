@@ -48,6 +48,7 @@ export const files = pgTable('files', {
   mimeType: text('mime_type').notNull(),
   extension: text('extension').notNull(),
   size: integer('size').notNull(),
+  originalSize: integer('original_size').notNull().default(0),
   width: integer('width'),
   height: integer('height'),
   hash: text('hash').notNull(),

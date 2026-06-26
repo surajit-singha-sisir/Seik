@@ -20,9 +20,9 @@ export async function findDuplicate(hash: string): Promise<DuplicateMatch | null
   return existing ? { ...existing, matchedBy: 'hash' } : null;
 }
 
-/** Pre-upload check by original filename + file size.
- * Used by the /api/uploads/check-duplicate endpoint so the client can warn
- * the user before spending bandwidth on an upload. */
+/** Pre-upload check by original filename + original file size (before compression).
+ * Used by the /api/uploads/check-duplicate endpoint so the client can hard-block
+ * duplicates before spending any bandwidth on the upload. */
 export async function findDuplicateByNameAndSize(
   originalFilename: string,
   size: number,
@@ -33,7 +33,7 @@ export async function findDuplicateByNameAndSize(
     .where(
       and(
         eq(files.originalFilename, originalFilename),
-        eq(files.size, size),
+        eq(files.originalSize, size),
       ),
     )
     .limit(1);

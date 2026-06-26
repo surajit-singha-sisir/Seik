@@ -36,7 +36,7 @@ const summaryAlbumName  = document.getElementById('summary-album-name');
 const summaryTagsRow    = document.getElementById('summary-tags-row');
 const summaryTagsList   = document.getElementById('summary-tags-list');
 
-// ── Duplicate modal refs ───────────────────────────────────
+// ── Duplicate modal refs (kept for legacy HTML; modal no longer used) ────────
 const dupBackdrop     = document.getElementById('dup-modal-backdrop');
 const dupModalList    = document.getElementById('dup-modal-list');
 const dupModalSubtitle= document.getElementById('dup-modal-subtitle');
@@ -266,12 +266,9 @@ function setStatus(entry, status) {
   badge.className = 'q-badge' + (cls ? ` q-badge-${cls}` : '');
 }
 
-function showDuplicate(entry, dup) {
+function showDuplicate(entry) {
   entry.dupEl.hidden = false;
-  const reason = dup.matchedBy === 'hash'
-    ? 'Identical file content already uploaded'
-    : 'Same filename & size already exists';
-  entry.dupEl.querySelector('span').textContent = reason;
+  entry.dupEl.querySelector('span').textContent = 'Same filename & size already exists — skipped';
   setStatus(entry, 'duplicate');
 }
 
@@ -301,109 +298,6 @@ async function preCheckDuplicate(file) {
     return null;
   }
 }
-
-// ── Batch duplicate check before uploading ────────────────
-async function batchCheckDuplicates(entries) {
-  // Only check file entries (not URL entries)
-  const fileEntries = entries.filter(e => e.file);
-  const results = await Promise.all(
-    fileEntries.map(async e => ({
-      entry: e,
-      dup: await preCheckDuplicate(e.file),
-    }))
-  );
-  return results.filter(r => r.dup !== null);
-}
-
-// ── Duplicate modal ───────────────────────────────────────
-function openDupModal(dupResults, onRemoveAll, onUploadAnyway, onCancel) {
-  // Build list
-  dupModalList.innerHTML = '';
-  dupResults.forEach(({ entry, dup }) => {
-    const li = document.createElement('li');
-    li.className = 'dup-modal-item';
-    li.dataset.entryId = entry.id;
-
-    // Thumb
-    const thumbDiv = document.createElement('div');
-    thumbDiv.className = 'dup-modal-thumb';
-    if (entry.file && entry.file.type.startsWith('image/')) {
-      const img = document.createElement('img');
-      const url = URL.createObjectURL(entry.file);
-      img.src = url;
-      img.onload = () => URL.revokeObjectURL(url);
-      thumbDiv.appendChild(img);
-    } else {
-      thumbDiv.innerHTML = '<i class="fa-solid fa-file"></i>';
-    }
-
-    // Info
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'dup-modal-info';
-    const nameEl = document.createElement('div');
-    nameEl.className = 'dup-modal-name';
-    nameEl.textContent = entry.file ? entry.file.name : 'Unknown';
-    const metaEl = document.createElement('div');
-    metaEl.className = 'dup-modal-meta';
-    metaEl.textContent = entry.file ? fmtSize(entry.file.size) : '';
-    infoDiv.appendChild(nameEl);
-    infoDiv.appendChild(metaEl);
-
-    // Match reason badge
-    const matchEl = document.createElement('span');
-    matchEl.className = 'dup-modal-match';
-    matchEl.textContent = dup.matchedBy === 'hash' ? 'same content' : 'same name & size';
-
-    // Remove button
-    const rmBtn = document.createElement('button');
-    rmBtn.type = 'button';
-    rmBtn.className = 'dup-modal-item-remove';
-    rmBtn.title = 'Remove from queue';
-    rmBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    rmBtn.addEventListener('click', () => {
-      li.remove();
-      // Remove from queue array and DOM
-      const idx = queue.findIndex(e => e.id === entry.id);
-      if (idx !== -1) {
-        queue[idx].node.remove();
-        queue.splice(idx, 1);
-      }
-      renderQueueHead();
-      // If no more items in modal list, close
-      if (!dupModalList.querySelector('.dup-modal-item')) {
-        closeDupModal();
-      }
-    });
-
-    li.appendChild(thumbDiv);
-    li.appendChild(infoDiv);
-    li.appendChild(matchEl);
-    li.appendChild(rmBtn);
-    dupModalList.appendChild(li);
-  });
-
-  const count = dupResults.length;
-  dupModalSubtitle.textContent =
-    `${count} file${count !== 1 ? 's' : ''} may already exist in your library.`;
-
-  dupBackdrop.hidden = false;
-  document.body.style.overflow = 'hidden';
-
-  // Button handlers — set fresh each time
-  btnDupRemoveAll.onclick = () => { onRemoveAll(dupResults); closeDupModal(); };
-  btnDupUploadAll.onclick = () => { closeDupModal(); onUploadAnyway(); };
-  btnDupCancel.onclick    = () => { closeDupModal(); onCancel(); };
-}
-
-function closeDupModal() {
-  dupBackdrop.hidden = true;
-  document.body.style.overflow = '';
-}
-
-// Close on backdrop click
-dupBackdrop.addEventListener('click', e => {
-  if (e.target === dupBackdrop) closeDupModal();
-});
 
 // ── XHR upload with progress ──────────────────────────────
 function uploadWithProgress(formData, onProgress) {
@@ -502,7 +396,7 @@ async function uploadEntry(entry) {
   }
 }
 
-// ── Upload All logic (with pre-flight duplicate check) ────
+// ── Upload All logic (hard-block duplicates before upload) ──
 async function startUploadAll() {
   const pending = queue.filter(e => e.status === 'queued');
   if (!pending.length) return;
@@ -511,39 +405,38 @@ async function startUploadAll() {
   btnUploadAll.disabled = true;
   btnUploadAll.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
 
-  const dupResults = await batchCheckDuplicates(pending);
+  // Check all file entries for duplicates in parallel
+  const checks = await Promise.all(
+    pending.map(async e => ({
+      entry: e,
+      isDup: e.file ? (await preCheckDuplicate(e.file)) !== null : false,
+    }))
+  );
 
   btnUploadAll.disabled = false;
   btnUploadAll.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Upload all';
 
-  if (dupResults.length > 0) {
-    openDupModal(
-      dupResults,
-      // Remove all duplicates then upload remaining
-      (dups) => {
-        dups.forEach(({ entry }) => {
-          const idx = queue.findIndex(e => e.id === entry.id);
-          if (idx !== -1) {
-            queue[idx].node.remove();
-            queue.splice(idx, 1);
-          }
-        });
-        renderQueueHead();
-        const remaining = queue.filter(e => e.status === 'queued');
-        remaining.forEach(e => uploadEntry(e));
-      },
-      // Upload anyway (including duplicates)
-      () => {
-        const remaining = queue.filter(e => e.status === 'queued');
-        remaining.forEach(e => uploadEntry(e));
-      },
-      // Cancel — do nothing
-      () => {},
-    );
-  } else {
-    // No duplicates — upload directly
-    pending.forEach(e => uploadEntry(e));
+  // Mark duplicates and collect non-duplicates
+  const toUpload = [];
+  let dupCount = 0;
+  for (const { entry, isDup } of checks) {
+    if (isDup) {
+      showDuplicate(entry);
+      dupCount++;
+    } else {
+      toUpload.push(entry);
+    }
   }
+
+  if (dupCount > 0) {
+    showToast(
+      `${dupCount} duplicate${dupCount !== 1 ? 's' : ''} skipped`,
+      'warn'
+    );
+  }
+
+  // Upload only the non-duplicate entries
+  toUpload.forEach(e => uploadEntry(e));
 }
 
 // ── File ingestion ────────────────────────────────────────
