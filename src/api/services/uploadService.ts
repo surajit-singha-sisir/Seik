@@ -42,7 +42,7 @@ export async function processUpload(input: UploadInput): Promise<UploadOutcome> 
   const metadata = await extractMetadata(input.buffer, mimeType);
 
   const quality = Math.min(100, Math.max(1, Math.round(
-    input.quality ?? Number(process.env.DEFAULT_COMPRESSION_QUALITY) || 85,
+    input.quality ?? (Number(process.env.DEFAULT_COMPRESSION_QUALITY) || 85),
   )));
   const { buffer: outBuffer, compressed } = await compressImage(input.buffer, mimeType, quality);
 
