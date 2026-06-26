@@ -1,16 +1,6 @@
-:root{
-  --ink:#0B0E14; --paper:#EDEAE3; --accent:#FF7A45; --ok:#3FA796; --line:rgba(237,234,227,.14);
-}
-*{box-sizing:border-box}
 .seik-body{
-  margin:0; min-height:100vh; background:var(--ink); color:var(--paper);
-  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;
   display:flex; flex-direction:column; justify-content:center;
-}
-.filmstrip{
-  height:18px; width:100%; flex-shrink:0;
-  background:repeating-linear-gradient(90deg, transparent 0 10px, var(--line) 10px 12px);
-  background-color:#05060a;
 }
 .seik-main{ max-width:720px; margin:0 auto; padding:4rem 1.5rem; width:100%; }
 .seik-header{ text-align:center; margin-bottom:2.5rem; }
@@ -20,6 +10,12 @@
   letter-spacing:-0.02em; margin:0;
 }
 .seik-sub{ color:rgba(237,234,227,.6); margin:.4rem 0 0; font-size:.95rem; }
+.seik-cta{
+  display:inline-flex; align-items:center; gap:.5rem; margin-top:1.5rem;
+  padding:.55rem 1.1rem; border:1px solid var(--line-strong); border-radius:999px;
+  color:var(--paper); font-size:.85rem; transition:border-color .15s, background .15s;
+}
+.seik-cta:hover{ border-color:var(--accent); background:rgba(255,122,69,.08); }
 
 .seik-card{
   border:1px solid var(--line); border-radius:12px; padding:1rem 1.25rem;

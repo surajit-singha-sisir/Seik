@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Seik — Upload</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css" />
+<link rel="stylesheet" href="/css/upload.css" />
+</head>
+<body class="up-body">
+  <div class="filmstrip" aria-hidden="true"></div>
+
+  <header class="up-header">
+    <a href="/" class="up-brand"><i class="fa-solid fa-aperture"></i> Seik</a>
+    <h1>Upload</h1>
+  </header>
+
+  <main class="up-main">
+    <section class="dropzone" id="dropzone" tabindex="0">
+      <i class="fa-solid fa-cloud-arrow-up dz-icon"></i>
+      <p class="dz-title">Drag files here, paste, or browse</p>
+      <p class="dz-sub">Images, PDFs, RAW &amp; design files — up to 32MB each</p>
+      <div class="dz-actions">
+        <button type="button" class="btn btn-accent" id="btn-browse"><i class="fa-solid fa-file"></i> Choose files</button>
+        <button type="button" class="btn" id="btn-folder"><i class="fa-solid fa-folder-open"></i> Upload folder</button>
+      </div>
+      <input type="file" id="file-input" multiple hidden />
+      <input type="file" id="folder-input" multiple webkitdirectory hidden />
+    </section>
+
+    <section class="url-row">
+      <i class="fa-solid fa-link"></i>
+      <input type="url" id="url-input" placeholder="Paste an image or PDF URL…" />
+      <button type="button" class="btn btn-accent" id="btn-url-add">Add</button>
+    </section>
+
+    <section class="queue-head" id="queue-head" hidden>
+      <span id="queue-count">0 files</span>
+      <div class="queue-head-actions">
+        <button type="button" class="btn" id="btn-clear-done">Clear completed</button>
+        <button type="button" class="btn btn-accent" id="btn-upload-all"><i class="fa-solid fa-paper-plane"></i> Upload all</button>
+      </div>
+    </section>
+
+    <ul class="queue" id="queue"></ul>
+  </main>
+
+  <template id="queue-item-template">
+    <li class="q-item" data-status="queued">
+      <div class="q-thumb"><i class="fa-solid fa-file"></i></div>
+      <div class="q-body">
+        <div class="q-row1">
+          <span class="q-name"></span>
+          <span class="q-status mono"></span>
+        </div>
+
+        <div class="q-stats mono">
+          <span class="q-original"></span>
+          <span class="q-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+          <span class="q-compressed">—</span>
+          <span class="q-reduction"></span>
+        </div>
+
+        <div class="q-quality-row">
+          <input type="range" min="1" max="100" value="85" class="q-quality-slider" />
+          <span class="q-quality-value mono">85%</span>
+        </div>
+
+        <div class="q-progress"><div class="q-progress-bar"></div></div>
+        <p class="q-duplicate" hidden><i class="fa-solid fa-clone"></i> <span></span></p>
+        <p class="q-error" hidden><i class="fa-solid fa-triangle-exclamation"></i> <span></span> <button type="button" class="q-retry">Retry</button></p>
+      </div>
+      <button type="button" class="q-remove" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+    </li>
+  </template>
+
+  <script src="/js/upload.js"></script>
+</body>
+</html>

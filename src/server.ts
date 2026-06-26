@@ -6,6 +6,7 @@ import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import uploadsRouter from './api/routes/uploads.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +29,8 @@ app.use(
 );
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+app.use('/api/uploads', uploadsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });
