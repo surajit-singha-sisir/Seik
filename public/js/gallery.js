@@ -138,49 +138,42 @@ document.getElementById('qr-modal').addEventListener('click', e => {
 });
 
 // ── Info / EXIF panel ─────────────────────────────────────
-async function openInfoPanel(f) {
-  const panel = document.getElementById('info-panel');
-  document.getElementById('info-loading').hidden = false;
-  document.getElementById('info-content').innerHTML = '';
+function openInfoPanel(f) {
+  const panel     = document.getElementById('info-panel');
+  const loadingEl = document.getElementById('info-loading');
+  const contentEl = document.getElementById('info-content');
+
+  loadingEl.hidden = false;
+  contentEl.innerHTML = '';
   panel.hidden = false;
 
-  try {
-    const res = await fetch(`/api/files/${f.id}`);
-    const data = await res.json();
-    document.getElementById('info-loading').hidden = true;
+  const rows = [
+    ['Filename', escHtml(f.filename || f.originalFilename || '—')],
+    ['Type',     escHtml(f.mimeType || '—')],
+    ['Size',     fmtSize(f.size)],
+    ['Dimensions', f.width && f.height ? `${f.width} × ${f.height} px` : '—'],
+    ['Uploaded', f.createdAt ? dayjs(f.createdAt).format('MMM D, YYYY h:mm A') : '—'],
+    ['Favourite', f.favorite ? '♥ Yes' : 'No'],
+  ];
 
-    const rows = [
-      ['Filename', escHtml(data.filename)],
-      ['Type', data.mimeType],
-      ['Size', fmtSize(data.size)],
-      ['Dimensions', data.width && data.height ? `${data.width} × ${data.height} px` : '—'],
-      ['Album', data.album ? `<a href="/albums/${data.album.id}">${escHtml(data.album.name)}</a>` : '—'],
-      ['Tags', data.tags?.length ? data.tags.map(t => `<a href="/tags/${t.id}" class="info-tag">#${escHtml(t.name)}</a>`).join(' ') : '—'],
-      ['Uploaded', dayjs(data.createdAt).format('MMM D, YYYY h:mm A')],
-      ['Favourite', data.favorite ? 'Yes' : 'No'],
-    ];
-
-    if (data.metadataJson?.exif) {
-      const e = data.metadataJson.exif;
-      if (e.camera) rows.push(['Camera', escHtml(e.camera)]);
-      if (e.lens) rows.push(['Lens', escHtml(e.lens)]);
-      if (e.iso) rows.push(['ISO', e.iso]);
-      if (e.exposure) rows.push(['Exposure', e.exposure]);
-      if (e.gps?.latitude) rows.push(['GPS', `${e.gps.latitude.toFixed(5)}, ${e.gps.longitude.toFixed(5)}`]);
-    }
-
-    document.getElementById('info-content').innerHTML = rows.map(([k, v]) =>
-      `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
-    ).join('');
-
-    // Copy & download buttons in panel
-    document.getElementById('info-copy').onclick = () => copyLink(f);
-    document.getElementById('info-dl').onclick = () => downloadFile(f);
-    document.getElementById('info-qr').onclick = () => { panel.hidden = true; openQRModal(f); };
-  } catch {
-    document.getElementById('info-loading').hidden = true;
-    document.getElementById('info-content').innerHTML = '<p style="color:var(--fail);padding:.5rem">Failed to load details.</p>';
+  if (f.metadataJson?.exif) {
+    const ex = f.metadataJson.exif;
+    if (ex.camera)          rows.push(['Camera',   escHtml(String(ex.camera))]);
+    if (ex.lens)            rows.push(['Lens',     escHtml(String(ex.lens))]);
+    if (ex.iso != null)     rows.push(['ISO',      String(ex.iso)]);
+    if (ex.exposure)        rows.push(['Exposure', escHtml(String(ex.exposure))]);
+    if (ex.gps?.latitude != null)
+      rows.push(['GPS', `${Number(ex.gps.latitude).toFixed(5)}, ${Number(ex.gps.longitude).toFixed(5)}`]);
   }
+
+  contentEl.innerHTML = rows.map(([k, v]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
+  ).join('');
+  loadingEl.hidden = true;
+
+  document.getElementById('info-copy').onclick = () => copyLink(f);
+  document.getElementById('info-dl').onclick   = () => downloadFile(f);
+  document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
 }
 document.getElementById('info-panel-close').addEventListener('click', () => {
   document.getElementById('info-panel').hidden = true;

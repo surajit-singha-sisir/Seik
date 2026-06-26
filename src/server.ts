@@ -29,9 +29,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   rateLimit({
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    max: Number(process.env.RATE_LIMIT_MAX) || 300,
+    max: Number(process.env.RATE_LIMIT_MAX) || 1000,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV !== 'production',
   }),
 );
 

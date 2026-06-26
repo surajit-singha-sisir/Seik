@@ -121,7 +121,7 @@
         <button class="modal-close" id="qr-modal-close"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <p id="qr-filename" style="font-size:.78rem;color:rgba(237,234,227,.45);max-width:280px;word-break:break-all"></p>
-      <img id="qr-img" src="" alt="QR Code" style="background:#EDEAE3;padding:12px;border-radius:10px" />
+      <div id="qr-canvas-wrap" style="background:#EDEAE3;padding:12px;border-radius:10px;min-width:196px;min-height:196px;display:flex;align-items:center;justify-content:center"></div>
       <a id="qr-link" class="btn btn-accent" download style="margin-top:.25rem"><i class="fa-solid fa-download"></i> Download PNG</a>
     </div>
   </div>
@@ -169,6 +169,7 @@
     <a href="/tags.html" class="bn-link active" title="Tags"><i class="fa-solid fa-tag"></i><span>Tags</span></a>
   </nav>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="/js/tag-detail.js"></script>
 </body>
 </html>

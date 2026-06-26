@@ -49,6 +49,7 @@ router.get('/:id', async (req, res) => {
         size: files.size, width: files.width, height: files.height,
         thumbUrl: files.thumbUrl, imgbbUrl: files.imgbbUrl, viewerUrl: files.viewerUrl,
         favorite: files.favorite, createdAt: files.createdAt,
+        metadataJson: files.metadataJson,
       })
       .from(files)
       .where(eq(files.albumId, req.params.id))

@@ -153,11 +153,11 @@ function openInfoPanel(f) {
   panel.hidden = false;
 
   const rows = [
-    ['Filename',   escHtml(f.filename)],
-    ['Type',       escHtml(f.mimeType || '—')],
+    ['Filename',   escHtml(f.filename   || f.originalFilename || '—')],
+    ['Type',       escHtml(f.mimeType   || '—')],
     ['Size',       fmtSize(f.size)],
     ['Dimensions', f.width && f.height ? `${f.width} × ${f.height} px` : '—'],
-    ['Uploaded',   fmtDate(f.createdAt)],
+    ['Uploaded',   f.createdAt ? fmtDate(f.createdAt) : '—'],
     ['Favourite',  f.favorite ? '♥ Yes' : 'No'],
   ];
   if (f.metadataJson?.exif) {
