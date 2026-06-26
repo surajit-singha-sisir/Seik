@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, files, fileTags, tags } from '../../database/index.js';
+import { db, files, fileTags, tags, albums } from '../../database/index.js';
 import { eq, and } from 'drizzle-orm';
 
 const router = Router();
@@ -56,7 +56,6 @@ router.post('/:id/tags', async (req, res) => {
     let resolvedTagId = tagId;
 
     if (!resolvedTagId && tagName?.trim()) {
-      // look up tag by name, create if missing
       const slug = tagName.trim().toLowerCase().normalize('NFKC')
         .replace(/\s+/g, '-').replace(/[^\p{L}\p{N}-]+/gu, '') || `tag-${Math.random().toString(36).slice(2, 8)}`;
       const existing = await db.select().from(tags).where(eq(tags.slug, slug));
@@ -69,13 +68,38 @@ router.post('/:id/tags', async (req, res) => {
     }
 
     if (!resolvedTagId) return res.status(400).json({ error: 'tagId or tagName required.' });
-
-    await db.insert(fileTags).values({ fileId: req.params.id, tagId: resolvedTagId })
-      .onConflictDoNothing();
+    await db.insert(fileTags).values({ fileId: req.params.id, tagId: resolvedTagId }).onConflictDoNothing();
     res.json({ ok: true, tagId: resolvedTagId });
   } catch (err) {
     console.error('[files/addtag]', err);
     res.status(500).json({ error: 'Failed to add tag to file.' });
+  }
+});
+
+/** GET /api/files/:id — full file detail with tags, album, EXIF */
+router.get('/:id', async (req, res) => {
+  try {
+    const [file] = await db.select().from(files).where(eq(files.id, req.params.id));
+    if (!file) return res.status(404).json({ error: 'File not found.' });
+
+    // Fetch tags for this file
+    const fileTags_ = await db
+      .select({ id: tags.id, name: tags.name, slug: tags.slug })
+      .from(fileTags)
+      .innerJoin(tags, eq(tags.id, fileTags.tagId))
+      .where(eq(fileTags.fileId, req.params.id));
+
+    // Fetch album name if set
+    let album: { id: string; name: string } | null = null;
+    if (file.albumId) {
+      const [a] = await db.select({ id: albums.id, name: albums.name }).from(albums).where(eq(albums.id, file.albumId));
+      album = a ?? null;
+    }
+
+    res.json({ ...file, tags: fileTags_, album });
+  } catch (err) {
+    console.error('[files/get]', err);
+    res.status(500).json({ error: 'Failed to load file.' });
   }
 });
 

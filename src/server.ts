@@ -12,6 +12,8 @@ import galleryRouter from './api/routes/gallery.js';
 import albumsRouter from './api/routes/albums.js';
 import tagsRouter from './api/routes/tags.js';
 import filesRouter from './api/routes/files.js';
+import qrRouter from './api/routes/qr.js';
+import searchRouter from './api/routes/search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +43,8 @@ app.use('/api/gallery', galleryRouter);
 app.use('/api/albums', albumsRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/qr', qrRouter);
+app.use('/api/search', searchRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });

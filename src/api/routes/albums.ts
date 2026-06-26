@@ -1,6 +1,18 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { db, albums, files } from '../../database/index.js';
 import { desc, eq, count } from 'drizzle-orm';
+
+const CreateAlbum = z.object({
+  name: z.string().trim().min(1, 'name is required').max(80),
+  description: z.string().trim().max(300).optional().nullable(),
+});
+const PatchAlbum = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  description: z.string().trim().max(300).nullable().optional(),
+  pinned: z.boolean().optional(),
+  favorite: z.boolean().optional(),
+});
 
 const router = Router();
 
@@ -52,10 +64,11 @@ router.get('/:id', async (req, res) => {
 /** POST /api/albums */
 router.post('/', async (req, res) => {
   try {
-    const { name, description } = req.body as { name?: string; description?: string };
-    if (!name?.trim()) return res.status(400).json({ error: 'name is required.' });
+    const parsed = CreateAlbum.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message });
+    const { name, description } = parsed.data;
     const [row] = await db.insert(albums)
-      .values({ name: name.trim(), description: description?.trim() || null })
+      .values({ name, description: description || null })
       .returning();
     res.status(201).json(row);
   } catch (err) {
@@ -67,16 +80,9 @@ router.post('/', async (req, res) => {
 /** PATCH /api/albums/:id */
 router.patch('/:id', async (req, res) => {
   try {
-    const { name, description, pinned, favorite } = req.body as {
-      name?: string; description?: string; pinned?: boolean; favorite?: boolean;
-    };
-    const updates: Record<string, unknown> = {
-      updatedAt: new Date(),
-    };
-    if (name !== undefined) updates.name = name.trim();
-    if (description !== undefined) updates.description = description?.trim() || null;
-    if (pinned !== undefined) updates.pinned = pinned;
-    if (favorite !== undefined) updates.favorite = favorite;
+    const parsed = PatchAlbum.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message });
+    const updates: Record<string, unknown> = { updatedAt: new Date(), ...parsed.data };
 
     const [row] = await db.update(albums)
       .set(updates)
