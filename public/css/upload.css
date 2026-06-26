@@ -93,6 +93,8 @@
 .q-error{
   font-size:.72rem; margin-top:.45rem; display:flex; align-items:center; gap:.45rem;
 }
+.q-duplicate[hidden],
+.q-error[hidden]{ display:none; }
 .q-duplicate{ color:var(--warn); }
 .q-error{ color:var(--fail); flex-wrap:wrap; }
 .q-retry{
