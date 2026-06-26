@@ -185,6 +185,9 @@ async function openInfoPanel(f) {
 document.getElementById('info-panel-close').addEventListener('click', () => {
   document.getElementById('info-panel').hidden = true;
 });
+document.getElementById('info-panel').addEventListener('click', e => {
+  if (e.target === document.getElementById('info-panel')) document.getElementById('info-panel').hidden = true;
+});
 // ── Icon thumb ────────────────────────────────────────────
 function iconThumb(mime) {
   const d = document.createElement('div'); d.className = 'g-thumb-icon';
