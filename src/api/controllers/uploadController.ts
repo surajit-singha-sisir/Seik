@@ -28,6 +28,14 @@ function parseTagIds(raw: unknown): string[] {
   return [];
 }
 
+/** Parse + clamp an expiration value (seconds) to ImgBB's allowed range (60s–180d) */
+function parseExpiresIn(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.min(15552000, Math.max(60, Math.round(n)));
+}
+
 /** After inserting a file, attach tag join-rows */
 async function attachTags(fileId: string, tagIds: string[]) {
   if (!tagIds.length) return;
@@ -49,6 +57,7 @@ export async function uploadFile(req: Request, res: Response) {
       claimedMimeType: req.file.mimetype,
       quality: req.body.quality ? Number(req.body.quality) : undefined,
       albumId: req.body.albumId || null,
+      expiresInSeconds: parseExpiresIn(req.body.expiresIn),
     });
 
     await attachTags(result.file.id, tagIds);
@@ -89,8 +98,8 @@ export async function previewCompression(req: Request, res: Response) {
 
 export async function uploadFromUrl(req: Request, res: Response) {
   try {
-    const { url, quality, albumId, tagIds: rawTagIds } = req.body as {
-      url?: string; quality?: string; albumId?: string; tagIds?: unknown;
+    const { url, quality, albumId, tagIds: rawTagIds, expiresIn } = req.body as {
+      url?: string; quality?: string; albumId?: string; tagIds?: unknown; expiresIn?: string | number;
     };
     if (!url) return res.status(400).json({ error: 'url is required.' });
     const tagIds = parseTagIds(rawTagIds);
@@ -115,6 +124,7 @@ export async function uploadFromUrl(req: Request, res: Response) {
       buffer, originalFilename: filename, claimedMimeType,
       quality: quality ? Number(quality) : undefined,
       albumId: albumId || null,
+      expiresInSeconds: parseExpiresIn(expiresIn),
     });
 
     await attachTags(result.file.id, tagIds);

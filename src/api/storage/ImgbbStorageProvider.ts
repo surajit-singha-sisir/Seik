@@ -47,12 +47,19 @@ export class ImgbbStorageProvider implements StorageProvider {
 
   /**
    * ImgBB has no public delete-by-id API — deletion requires the
-   * one-time delete_url issued at upload time. Pass that URL in here.
+   * one-time delete_url issued at upload time. This mimics the request
+   * the web UI's own "Delete" button makes, but it's unofficial/undocumented
+   * behavior: it can fail silently and isn't guaranteed by ImgBB to work.
+   * Treat the `expiration` param at upload time as the reliable deletion path.
    */
   async delete(deleteUrl: string): Promise<boolean> {
     try {
-      await axios.get(deleteUrl);
-      return true;
+      const res = await axios.get(deleteUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ImgbbCleanupBot/1.0)' },
+        maxRedirects: 5,
+        validateStatus: (status) => status < 500,
+      });
+      return res.status < 400;
     } catch {
       return false;
     }
