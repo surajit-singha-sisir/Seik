@@ -135,10 +135,13 @@ function buildCard(a) {
   `;
 
   // Action delegation
-  card.querySelector('[data-action="edit"]').addEventListener('click', () => openEdit(a));
-  card.querySelector('[data-action="pin"]').addEventListener('click', () => toggleField(a.id, 'pinned', !a.pinned));
-  card.querySelector('[data-action="fav"]').addEventListener('click', () => toggleField(a.id, 'favorite', !a.favorite));
-  card.querySelector('[data-action="delete"]').addEventListener('click', () => deleteAlbum(a));
+  card.querySelector('[data-action="edit"]').addEventListener('click', e => { e.stopPropagation(); openEdit(a); });
+  card.querySelector('[data-action="pin"]').addEventListener('click', e => { e.stopPropagation(); toggleField(a.id, 'pinned', !a.pinned); });
+  card.querySelector('[data-action="fav"]').addEventListener('click', e => { e.stopPropagation(); toggleField(a.id, 'favorite', !a.favorite); });
+  card.querySelector('[data-action="delete"]').addEventListener('click', e => { e.stopPropagation(); deleteAlbum(a); });
+
+  // Clicking the card body opens the dynamic, DB-backed album page
+  card.addEventListener('click', () => { location.href = `/albums/${a.id}`; });
 
   return card;
 }
