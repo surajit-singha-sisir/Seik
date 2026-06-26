@@ -111,8 +111,11 @@ function buildCard(t) {
     </div>
   `;
 
-  card.querySelector('.edit-btn').addEventListener('click', () => startInlineEdit(t, card));
-  card.querySelector('.del').addEventListener('click', () => deleteTag(t));
+  card.querySelector('.edit-btn').addEventListener('click', e => { e.stopPropagation(); startInlineEdit(t, card); });
+  card.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); deleteTag(t); });
+
+  // Click the card body → open dynamic tag detail page
+  card.addEventListener('click', () => { location.href = `/tags/${t.id}`; });
 
   return card;
 }

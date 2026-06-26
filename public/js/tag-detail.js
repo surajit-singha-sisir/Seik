@@ -128,7 +128,8 @@ function buildFileCard(f) {
   card.appendChild(remove);
 
   const info = document.createElement('div'); info.className = 'g-info';
-  info.innerHTML = `<div class="g-name">${escHtml(f.filename)}</div><div class="g-size">${fmtSize(f.size)}</div>`;
+  const favoriteIcon = f.favorite ? '<i class="fa-solid fa-heart" style="color:#f87171;font-size:.6rem;margin-left:.25rem"></i>' : '';
+  info.innerHTML = `<div class="g-name">${escHtml(f.filename)}${favoriteIcon}</div><div class="g-size">${fmtSize(f.size)}</div>`;
   card.appendChild(info);
 
   if (isImg) card.addEventListener('click', () => openLb(f));
