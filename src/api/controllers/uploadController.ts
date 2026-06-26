@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import axios from 'axios';
 import { processUpload } from '../services/uploadService.js';
+import { compressImage } from '../services/compressionService.js';
+import { validateUpload } from '../../utils/validateUpload.js';
 import { UploadError } from '../../utils/errors.js';
 
 const MAX_BYTES = (Number(process.env.MAX_UPLOAD_SIZE_MB) || 32) * 1024 * 1024;
@@ -31,6 +33,44 @@ export async function uploadFile(req: Request, res: Response) {
     res.status(201).json(result);
   } catch (err) {
     handleUploadError(err, res);
+  }
+}
+
+/** Preview endpoint — accepts a staged multipart file + quality value, runs
+ * compression, and returns the projected size WITHOUT persisting anything.
+ * The client calls this on each slider change to show live size estimates. */
+export async function previewCompression(req: Request, res: Response) {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file provided.' });
+
+    const quality = Math.min(100, Math.max(1, Math.round(
+      req.body.quality ? Number(req.body.quality) : 85,
+    )));
+
+    const validation = await validateUpload(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+    );
+    if (!validation.ok) {
+      return res.status(422).json({ error: validation.reason });
+    }
+
+    const mimeType = validation.detectedMime || req.file.mimetype;
+    const { buffer: out, compressed } = await compressImage(req.file.buffer, mimeType, quality);
+
+    res.json({
+      originalSize: req.file.buffer.length,
+      compressedSize: out.length,
+      quality,
+      compressed,
+      reductionPercent: req.file.buffer.length > 0
+        ? Math.round((1 - out.length / req.file.buffer.length) * 100)
+        : 0,
+    });
+  } catch (err) {
+    console.error('[preview] error:', err);
+    res.status(500).json({ error: 'Preview failed.' });
   }
 }
 
