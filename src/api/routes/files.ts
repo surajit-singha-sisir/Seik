@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db, files, fileTags, tags, albums } from '../../database/index.js';
 import { eq, and } from 'drizzle-orm';
+import { getStorageProvider } from '../storage/index.js';
 
 const router = Router();
 
@@ -25,11 +26,24 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-/** DELETE /api/files/:id — delete the file record */
+/** DELETE /api/files/:id — delete from ImgBB (best-effort) then remove the record */
 router.delete('/:id', async (req, res) => {
   try {
+    const [file] = await db.select().from(files).where(eq(files.id, req.params.id));
+    if (!file) return res.status(404).json({ error: 'File not found.' });
+
+    let remoteDeleted = false;
+    if (file.deleteUrl) {
+      try {
+        const provider = getStorageProvider(file.storageProvider);
+        remoteDeleted = await provider.delete(file.deleteUrl);
+      } catch (providerErr) {
+        console.error('[files/delete] remote delete failed', providerErr);
+      }
+    }
+
     await db.delete(files).where(eq(files.id, req.params.id));
-    res.json({ ok: true });
+    res.json({ ok: true, remoteDeleted });
   } catch (err) {
     console.error('[files/delete]', err);
     res.status(500).json({ error: 'Failed to delete file.' });
