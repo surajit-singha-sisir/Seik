@@ -87,3 +87,550 @@ async function checkHealth() {
     el.childNodes[1].textContent = ' Unreachable';
   }
 }
+
+// ── Settings: albums ──────────────────────────────────────
+async function loadAlbums() {
+  try {
+    const data = await fetch('/api/albums?limit=200').then(r => r.json());
+    const items = Array.isArray(data) ? data : (data.albums ?? []);
+    items.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id; opt.textContent = a.name;
+      albumSelect.appendChild(opt);
+    });
+  } catch { /* non-fatal */ }
+}
+
+// ── Settings: tags ────────────────────────────────────────
+async function loadTags() {
+  try {
+    const data = await fetch('/api/tags?limit=200').then(r => r.json());
+    allTags = Array.isArray(data) ? data : (data.tags ?? []);
+    renderTagPicker();
+  } catch {
+    tagsPicker.innerHTML = '<span class="tags-placeholder">Failed to load tags</span>';
+  }
+}
+
+function renderTagPicker() {
+  tagsPicker.innerHTML = '';
+  if (!allTags.length) {
+    tagsPicker.innerHTML = '<span class="tags-placeholder">No tags yet</span>';
+    return;
+  }
+  allTags.forEach(tag => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'tag-pill' + (selectedTagIds.has(tag.id) ? ' selected' : '');
+    pill.dataset.id = tag.id;
+    pill.textContent = tag.name;
+    pill.addEventListener('click', () => {
+      selectedTagIds.has(tag.id) ? selectedTagIds.delete(tag.id) : selectedTagIds.add(tag.id);
+      pill.classList.toggle('selected', selectedTagIds.has(tag.id));
+      updateSummary();
+    });
+    tagsPicker.appendChild(pill);
+  });
+}
+
+async function createTag() {
+  const name = newTagInput.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error();
+    const tag = await res.json();
+    allTags.push(tag);
+    selectedTagIds.add(tag.id);
+    renderTagPicker();
+    newTagInput.value = '';
+    updateSummary();
+    showToast(`Tag "${tag.name}" created`, 'ok');
+  } catch {
+    showToast('Failed to create tag', 'fail');
+  }
+}
+
+// ── Settings summary ──────────────────────────────────────
+function updateSummary() {
+  const albumName = albumSelect.options[albumSelect.selectedIndex]?.text;
+  const hasAlbum  = !!albumSelect.value;
+  const hasTags   = selectedTagIds.size > 0;
+
+  summaryAlbumRow.hidden = !hasAlbum;
+  summaryAlbumName.textContent = hasAlbum ? albumName : '—';
+
+  summaryTagsRow.hidden = !hasTags;
+  if (hasTags) {
+    const names = allTags.filter(t => selectedTagIds.has(t.id)).map(t => t.name);
+    summaryTagsList.textContent = names.join(', ');
+  }
+
+  settingSummary.hidden = !hasAlbum && !hasTags;
+}
+
+// ── Queue rendering ───────────────────────────────────────
+function renderQueueHead() {
+  const total = queue.length;
+  queueHead.hidden = total === 0;
+  queueCount.textContent = `${total} file${total !== 1 ? 's' : ''}`;
+}
+
+function addToQueue(file, urlString) {
+  const id = ++nextId;
+  const node = itemTpl.content.cloneNode(true).querySelector('.q-item');
+  node.dataset.id = id;
+
+  const nameEl    = node.querySelector('.q-name');
+  const origEl    = node.querySelector('.q-original');
+  const compEl    = node.querySelector('.q-compressed');
+  const redEl     = node.querySelector('.q-reduction');
+  const arrowEl   = node.querySelector('.q-arrow');
+  const progBar   = node.querySelector('.q-progress-bar');
+  const dupEl     = node.querySelector('.q-duplicate');
+  const errEl     = node.querySelector('.q-error');
+  const badgeEl   = node.querySelector('.q-badge');
+  const thumbEl   = node.querySelector('.q-thumb');
+  const qualSlider= node.querySelector('.q-quality-slider');
+  const qualVal   = node.querySelector('.q-quality-value');
+  const qualRow   = node.querySelector('.q-quality-row');
+  const rmBtn     = node.querySelector('.q-remove');
+
+  const entry = {
+    id, file, urlString,
+    node, nameEl, origEl, compEl, redEl, arrowEl,
+    progBar, dupEl, errEl, badgeEl, thumbEl,
+    qualSlider, qualVal, qualRow, rmBtn,
+    status: 'queued',
+  };
+  queue.push(entry);
+  queueList.appendChild(node);
+
+  // Name & size
+  const name = file ? file.name : (urlString || 'URL');
+  nameEl.textContent = name;
+  nameEl.title = name;
+  origEl.textContent = file ? fmtSize(file.size) : '—';
+  arrowEl.hidden = true;
+  compEl.hidden = true;
+  redEl.hidden = true;
+
+  // Thumb preview for images
+  if (file && file.type.startsWith('image/')) {
+    const img = document.createElement('img');
+    img.alt = '';
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    img.onload = () => URL.revokeObjectURL(url);
+    thumbEl.innerHTML = '';
+    thumbEl.appendChild(img);
+  }
+
+  // Quality slider sync
+  qualSlider.value = globalQuality.value;
+  qualVal.textContent = `${qualSlider.value}%`;
+  qualRow.hidden = !file || !COMPRESSIBLE_MIME.has(file.type);
+  qualSlider.addEventListener('input', () => {
+    qualVal.textContent = `${qualSlider.value}%`;
+  });
+
+  // Remove button
+  rmBtn.addEventListener('click', () => {
+    const idx = queue.findIndex(e => e.id === id);
+    if (idx !== -1) queue.splice(idx, 1);
+    node.remove();
+    renderQueueHead();
+  });
+
+  renderQueueHead();
+  return entry;
+}
+
+function setStatus(entry, status) {
+  entry.status = status;
+  entry.node.dataset.status = status;
+  const badge = entry.badgeEl;
+  const labels = {
+    queued:     ['queued',   ''],
+    uploading:  ['uploading',''],
+    done:       ['done',     'ok'],
+    failed:     ['failed',   'fail'],
+    duplicate:  ['duplicate','warn'],
+  };
+  const [text, cls] = labels[status] || ['', ''];
+  badge.textContent = text;
+  badge.className = 'q-badge' + (cls ? ` q-badge-${cls}` : '');
+}
+
+function showDuplicate(entry, dup) {
+  entry.dupEl.hidden = false;
+  const reason = dup.matchedBy === 'hash'
+    ? 'Identical file content already uploaded'
+    : 'Same filename & size already exists';
+  entry.dupEl.querySelector('span').textContent = reason;
+  setStatus(entry, 'duplicate');
+}
+
+function showError(entry, msg) {
+  entry.errEl.hidden = false;
+  entry.errEl.querySelector('span').textContent = msg;
+  entry.errEl.querySelector('.q-retry').onclick = () => {
+    entry.errEl.hidden = true;
+    setStatus(entry, 'queued');
+    uploadEntry(entry);
+  };
+  setStatus(entry, 'failed');
+}
+
+// ── Pre-upload duplicate check ────────────────────────────
+async function preCheckDuplicate(file) {
+  try {
+    const res = await fetch('/api/uploads/check-duplicate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, size: file.size }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.duplicate ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Batch duplicate check before uploading ────────────────
+async function batchCheckDuplicates(entries) {
+  // Only check file entries (not URL entries)
+  const fileEntries = entries.filter(e => e.file);
+  const results = await Promise.all(
+    fileEntries.map(async e => ({
+      entry: e,
+      dup: await preCheckDuplicate(e.file),
+    }))
+  );
+  return results.filter(r => r.dup !== null);
+}
+
+// ── Duplicate modal ───────────────────────────────────────
+function openDupModal(dupResults, onRemoveAll, onUploadAnyway, onCancel) {
+  // Build list
+  dupModalList.innerHTML = '';
+  dupResults.forEach(({ entry, dup }) => {
+    const li = document.createElement('li');
+    li.className = 'dup-modal-item';
+    li.dataset.entryId = entry.id;
+
+    // Thumb
+    const thumbDiv = document.createElement('div');
+    thumbDiv.className = 'dup-modal-thumb';
+    if (entry.file && entry.file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      const url = URL.createObjectURL(entry.file);
+      img.src = url;
+      img.onload = () => URL.revokeObjectURL(url);
+      thumbDiv.appendChild(img);
+    } else {
+      thumbDiv.innerHTML = '<i class="fa-solid fa-file"></i>';
+    }
+
+    // Info
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'dup-modal-info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'dup-modal-name';
+    nameEl.textContent = entry.file ? entry.file.name : 'Unknown';
+    const metaEl = document.createElement('div');
+    metaEl.className = 'dup-modal-meta';
+    metaEl.textContent = entry.file ? fmtSize(entry.file.size) : '';
+    infoDiv.appendChild(nameEl);
+    infoDiv.appendChild(metaEl);
+
+    // Match reason badge
+    const matchEl = document.createElement('span');
+    matchEl.className = 'dup-modal-match';
+    matchEl.textContent = dup.matchedBy === 'hash' ? 'same content' : 'same name & size';
+
+    // Remove button
+    const rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'dup-modal-item-remove';
+    rmBtn.title = 'Remove from queue';
+    rmBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    rmBtn.addEventListener('click', () => {
+      li.remove();
+      // Remove from queue array and DOM
+      const idx = queue.findIndex(e => e.id === entry.id);
+      if (idx !== -1) {
+        queue[idx].node.remove();
+        queue.splice(idx, 1);
+      }
+      renderQueueHead();
+      // If no more items in modal list, close
+      if (!dupModalList.querySelector('.dup-modal-item')) {
+        closeDupModal();
+      }
+    });
+
+    li.appendChild(thumbDiv);
+    li.appendChild(infoDiv);
+    li.appendChild(matchEl);
+    li.appendChild(rmBtn);
+    dupModalList.appendChild(li);
+  });
+
+  const count = dupResults.length;
+  dupModalSubtitle.textContent =
+    `${count} file${count !== 1 ? 's' : ''} may already exist in your library.`;
+
+  dupBackdrop.hidden = false;
+  document.body.style.overflow = 'hidden';
+
+  // Button handlers — set fresh each time
+  btnDupRemoveAll.onclick = () => { onRemoveAll(dupResults); closeDupModal(); };
+  btnDupUploadAll.onclick = () => { closeDupModal(); onUploadAnyway(); };
+  btnDupCancel.onclick    = () => { closeDupModal(); onCancel(); };
+}
+
+function closeDupModal() {
+  dupBackdrop.hidden = true;
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+dupBackdrop.addEventListener('click', e => {
+  if (e.target === dupBackdrop) closeDupModal();
+});
+
+// ── XHR upload with progress ──────────────────────────────
+function uploadWithProgress(formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/uploads');
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    });
+    xhr.addEventListener('load', () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(new Error(data.error || `HTTP ${xhr.status}`));
+      } catch {
+        reject(new Error('Invalid server response'));
+      }
+    });
+    xhr.addEventListener('error', () => reject(new Error('Network error')));
+    xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+    xhr.send(formData);
+  });
+}
+
+// ── Upload a single queue entry ───────────────────────────
+async function uploadEntry(entry) {
+  if (entry.status === 'uploading' || entry.status === 'done') return;
+
+  setStatus(entry, 'uploading');
+  entry.errEl.hidden = true;
+  entry.dupEl.hidden = true;
+  entry.progBar.style.width = '0%';
+
+  try {
+    let data;
+
+    if (entry.urlString) {
+      // URL-based upload
+      const res = await fetch('/api/uploads/url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: entry.urlString,
+          quality: Number(globalQuality.value),
+          albumId: albumSelect.value || undefined,
+          tagIds: [...selectedTagIds],
+        }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      entry.progBar.style.width = '100%';
+    } else {
+      // File upload
+      const fd = new FormData();
+      fd.append('file', entry.file);
+      fd.append('quality', entry.qualSlider.value);
+      if (albumSelect.value) fd.append('albumId', albumSelect.value);
+      if (selectedTagIds.size) fd.append('tagIds', JSON.stringify([...selectedTagIds]));
+
+      data = await uploadWithProgress(fd, pct => {
+        entry.progBar.style.width = `${Math.round(pct * 100)}%`;
+      });
+    }
+
+    // Show compression stats
+    if (data.compression) {
+      const c = data.compression;
+      entry.arrowEl.hidden = false;
+      entry.compEl.hidden = false;
+      entry.redEl.hidden = false;
+      entry.compEl.textContent = fmtSize(c.compressedSize);
+      entry.redEl.textContent = fmtPct(c.reductionPercent);
+      entry.redEl.className = 'q-reduction' + (c.reductionPercent > 0 ? ' q-reduction-good' : '');
+    }
+
+    // Post-upload server-side duplicate check (hash-based)
+    if (data.duplicate) {
+      showDuplicate(entry, data.duplicate);
+    } else {
+      setStatus(entry, 'done');
+    }
+
+    // Update thumb with returned URL if available
+    if (data.file?.thumbUrl && entry.thumbEl) {
+      const img = entry.thumbEl.querySelector('img') || document.createElement('img');
+      img.src = data.file.thumbUrl;
+      img.alt = '';
+      if (!img.parentElement) {
+        entry.thumbEl.innerHTML = '';
+        entry.thumbEl.appendChild(img);
+      }
+    }
+
+  } catch (err) {
+    showError(entry, err.message || 'Upload failed');
+  }
+}
+
+// ── Upload All logic (with pre-flight duplicate check) ────
+async function startUploadAll() {
+  const pending = queue.filter(e => e.status === 'queued');
+  if (!pending.length) return;
+
+  // Disable button while checking
+  btnUploadAll.disabled = true;
+  btnUploadAll.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+
+  const dupResults = await batchCheckDuplicates(pending);
+
+  btnUploadAll.disabled = false;
+  btnUploadAll.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Upload all';
+
+  if (dupResults.length > 0) {
+    openDupModal(
+      dupResults,
+      // Remove all duplicates then upload remaining
+      (dups) => {
+        dups.forEach(({ entry }) => {
+          const idx = queue.findIndex(e => e.id === entry.id);
+          if (idx !== -1) {
+            queue[idx].node.remove();
+            queue.splice(idx, 1);
+          }
+        });
+        renderQueueHead();
+        const remaining = queue.filter(e => e.status === 'queued');
+        remaining.forEach(e => uploadEntry(e));
+      },
+      // Upload anyway (including duplicates)
+      () => {
+        const remaining = queue.filter(e => e.status === 'queued');
+        remaining.forEach(e => uploadEntry(e));
+      },
+      // Cancel — do nothing
+      () => {},
+    );
+  } else {
+    // No duplicates — upload directly
+    pending.forEach(e => uploadEntry(e));
+  }
+}
+
+// ── File ingestion ────────────────────────────────────────
+function addFiles(files) {
+  [...files].forEach(f => addToQueue(f, null));
+}
+
+function addUrl(urlStr) {
+  try { new URL(urlStr); } catch {
+    showToast('Not a valid URL', 'fail'); return;
+  }
+  addToQueue(null, urlStr);
+}
+
+// ── Dropzone events ───────────────────────────────────────
+dropzone.addEventListener('click', e => {
+  // Ignore clicks that originated from buttons/inputs inside the dropzone
+  if (e.target.closest('button, input')) return;
+  fileInput.click();
+});
+dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+btnBrowse.addEventListener('click', () => fileInput.click());
+btnFolder.addEventListener('click', () => folderInput.click());
+fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+folderInput.addEventListener('change', () => { addFiles(folderInput.files); folderInput.value = ''; });
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dz-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dz-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dz-over');
+  const files = [...e.dataTransfer.items]
+    .filter(i => i.kind === 'file')
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  addFiles(files);
+});
+
+document.addEventListener('paste', e => {
+  const items = [...(e.clipboardData?.items || [])];
+  const files = items.filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+  if (files.length) addFiles(files);
+});
+
+// ── URL add ───────────────────────────────────────────────
+btnUrlAdd.addEventListener('click', () => {
+  const v = urlInput.value.trim();
+  if (v) { addUrl(v); urlInput.value = ''; }
+});
+urlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const v = urlInput.value.trim();
+    if (v) { addUrl(v); urlInput.value = ''; }
+  }
+});
+
+// ── Queue controls ────────────────────────────────────────
+btnUploadAll.addEventListener('click', startUploadAll);
+
+btnClearDone.addEventListener('click', () => {
+  for (let i = queue.length - 1; i >= 0; i--) {
+    if (queue[i].status === 'done') {
+      queue[i].node.remove();
+      queue.splice(i, 1);
+    }
+  }
+  renderQueueHead();
+});
+
+// ── Settings controls ─────────────────────────────────────
+albumSelect.addEventListener('change', updateSummary);
+
+globalQuality.addEventListener('input', () => {
+  globalQualLabel.textContent = `${globalQuality.value}%`;
+  // Sync all queued items that haven't started
+  queue.forEach(e => {
+    if (e.status === 'queued' && !e.qualRow.hidden) {
+      e.qualSlider.value = globalQuality.value;
+      e.qualVal.textContent = `${globalQuality.value}%`;
+    }
+  });
+});
+
+btnNewTag.addEventListener('click', createTag);
+newTagInput.addEventListener('keydown', e => { if (e.key === 'Enter') createTag(); });
+
+// ── Init ──────────────────────────────────────────────────
+checkHealth();
+loadAlbums();
+loadTags();
