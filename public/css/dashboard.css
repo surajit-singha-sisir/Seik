@@ -203,11 +203,33 @@
 }
 @media(max-width:600px){
   .sidebar{ display:none; }
-  .dash-main{ padding:1.25rem; }
+  .dash-main{ padding:1.25rem; padding-bottom:5rem; }
   .stats-row{ grid-template-columns:1fr 1fr; }
   .lb-img{ max-height:calc(100vh - 7.5rem); max-width:96vw; }
-  .lb-meta{ bottom:4rem; font-size:.68rem; }
-  .lb-actions{ bottom:.75rem; }
+  .lb-meta{ bottom:5.5rem; font-size:.68rem; }
+  .lb-actions{ bottom:4.25rem; }
+}
+
+/* ── Bottom Nav (mobile only) ────────────────────────────── */
+.bottom-nav{
+  display:none;
+}
+@media(max-width:600px){
+  .bottom-nav{
+    display:flex; position:fixed; bottom:0; left:0; right:0; z-index:900;
+    background:var(--ink-2); border-top:1px solid var(--line-strong);
+    height:60px; align-items:stretch;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .bn-link{
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:3px; color:rgba(237,234,227,.45);
+    text-decoration:none; font-size:.6rem; letter-spacing:.03em;
+    transition:color .15s; padding:0 4px;
+  }
+  .bn-link i{ font-size:1.1rem; line-height:1; }
+  .bn-link:hover{ color:var(--paper); }
+  .bn-link.active{ color:var(--accent); }
 }
 
 /* ── Shared toast ────────────────────────────────────────── */
