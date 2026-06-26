@@ -353,7 +353,6 @@ async function uploadEntry(entry) {
       // File upload
       const fd = new FormData();
       fd.append('file', entry.file);
-      fd.append('quality', entry.qualSlider.value);
       if (albumSelect.value) fd.append('albumId', albumSelect.value);
       if (selectedTagIds.size) fd.append('tagIds', JSON.stringify([...selectedTagIds]));
 

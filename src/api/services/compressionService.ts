@@ -54,8 +54,17 @@ export async function compressImage(
     }
 
     const out = await pipeline.toBuffer();
-    // Guard against re-encoding ever producing a larger file than the original.
-    return out.length < buffer.length ? { buffer: out, compressed: true } : { buffer, compressed: false };
+    // Guard against re-encoding producing a larger file than the original (can
+    // happen on tiny/synthetic test images where JPEG/PNG header overhead
+    // outweighs any savings). Real photos at typical resolutions will shrink.
+    if (out.length >= buffer.length) {
+      console.warn(
+        `[compression] re-encoded output (${out.length}B) was not smaller than original (${buffer.length}B) ` +
+        `at quality=${q} for ${mimeType}; keeping original.`,
+      );
+      return { buffer, compressed: false };
+    }
+    return { buffer: out, compressed: true };
   } catch {
     // If libvips can't decode it for some reason, fail safe and keep the original.
     return { buffer, compressed: false };
