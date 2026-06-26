@@ -38,6 +38,11 @@ router.get('/', async (_req, res) => {
         imgbbUrl: files.imgbbUrl,
         viewerUrl: files.viewerUrl,
         createdAt: files.createdAt,
+        favorite: files.favorite,
+        hidden: files.hidden,
+        archived: files.archived,
+        metadataJson: files.metadataJson,
+        albumId: files.albumId,
       })
       .from(files)
       .orderBy(desc(files.createdAt))

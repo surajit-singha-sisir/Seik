@@ -202,20 +202,27 @@ function openQRModal(f) {
   const img   = document.getElementById('qr-img');
   const link  = document.getElementById('qr-link');
 
+  const publicUrl = f.viewerUrl || f.imgbbUrl;
+
   // Reset state
   img.src = '';
   img.style.cssText = 'width:220px;height:220px;border-radius:10px;object-fit:contain;display:block;';
   img.alt = 'QR Code';
   link.style.display = 'none';
   document.getElementById('qr-filename').textContent = f.filename;
-
-  // Show modal first so user sees loading state
   modal.hidden = false;
 
-  // Load QR via dataurl to get inline base64 — avoids SVG <img> sizing bug
+  if (!publicUrl) {
+    img.alt = 'No public URL available';
+    img.style.cssText += 'opacity:.3;';
+    showToast('This file has no public URL for a QR code', 'fail');
+    return;
+  }
+
+  // Use the dataurl endpoint — avoids SVG <img> sizing bug
   fetch(`/api/qr/${f.id}?format=dataurl`)
     .then(res => {
-      if (!res.ok) throw new Error(`QR fetch failed: ${res.status}`);
+      if (!res.ok) throw new Error(`${res.status}`);
       return res.json();
     })
     .then(data => {
@@ -224,10 +231,10 @@ function openQRModal(f) {
       link.download = `qr-${f.filename}.png`;
       link.style.display = '';
     })
-    .catch(() => {
+    .catch(err => {
       img.alt = 'QR generation failed';
-      img.style.cssText += 'opacity:.4;';
-      showToast('QR code unavailable — file may have no public URL', 'fail');
+      img.style.cssText += 'opacity:.3;';
+      showToast(`QR failed (${err.message}) — file record may be missing`, 'fail');
     });
 }
 document.getElementById('qr-modal-close').addEventListener('click', () => {
@@ -242,40 +249,59 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 async function openInfoPanel(f) {
-  const panel = document.getElementById('info-panel');
-  document.getElementById('info-loading').hidden = false;
-  document.getElementById('info-content').innerHTML = '';
+  const panel      = document.getElementById('info-panel');
+  const loadingEl  = document.getElementById('info-loading');
+  const contentEl  = document.getElementById('info-content');
+
+  loadingEl.hidden = false;
+  contentEl.innerHTML = '';
   panel.hidden = false;
-  try {
-    const res  = await fetch(`/api/files/${f.id}`);
-    const data = await res.json();
-    document.getElementById('info-loading').hidden = true;
-    const rows = [
-      ['Filename', escHtml(data.filename)],
-      ['Type',     data.mimeType],
-      ['Size',     fmtSize(data.size)],
-      ['Dimensions', data.width && data.height ? `${data.width} × ${data.height} px` : '—'],
-      ['Uploaded', new Date(data.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})],
-      ['Favourite', data.favorite ? 'Yes' : 'No'],
-    ];
-    if (data.metadataJson?.exif) {
-      const ex = data.metadataJson.exif;
-      if (ex.camera)   rows.push(['Camera', escHtml(ex.camera)]);
-      if (ex.lens)     rows.push(['Lens', escHtml(ex.lens)]);
-      if (ex.iso)      rows.push(['ISO', ex.iso]);
-      if (ex.exposure) rows.push(['Exposure', ex.exposure]);
-      if (ex.gps?.latitude) rows.push(['GPS', `${ex.gps.latitude.toFixed(5)}, ${ex.gps.longitude.toFixed(5)}`]);
+
+  // ── Render immediately from the data we already have on `f` ──
+  // (dashboard API now returns favorite, metadataJson, etc.)
+  renderInfoContent(f);
+  loadingEl.hidden = true;
+
+  document.getElementById('info-copy').onclick = () => copyLink(f);
+  document.getElementById('info-dl').onclick   = () => downloadFile(f);
+  document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
+}
+
+function renderInfoContent(data) {
+  const contentEl = document.getElementById('info-content');
+
+  const rows = [
+    ['Filename',   escHtml(data.filename)],
+    ['Type',       escHtml(data.mimeType)],
+    ['Size',       fmtSize(data.size)],
+    ['Dimensions', data.width && data.height ? `${data.width} × ${data.height} px` : '—'],
+    ['Uploaded',   new Date(data.createdAt).toLocaleDateString(undefined, {
+                     month:'short', day:'numeric', year:'numeric',
+                     hour:'2-digit', minute:'2-digit'
+                   })],
+    ['Favourite',  data.favorite ? '♥ Yes' : 'No'],
+  ];
+
+  if (data.album?.name)  rows.push(['Album', escHtml(data.album.name)]);
+  if (data.tags?.length) rows.push(['Tags',  data.tags.map(t => escHtml(t.name)).join(', ')]);
+
+  // ── EXIF (from metadataJson.exif written by metadataService) ──
+  const exif = data.metadataJson?.exif;
+  if (exif) {
+    if (exif.camera)          rows.push(['Camera',    escHtml(String(exif.camera))]);
+    if (exif.lens)            rows.push(['Lens',      escHtml(String(exif.lens))]);
+    if (exif.iso != null)     rows.push(['ISO',       escHtml(String(exif.iso))]);
+    if (exif.exposure)        rows.push(['Exposure',  escHtml(String(exif.exposure))]);
+    if (exif.colorProfile)    rows.push(['Color',     escHtml(String(exif.colorProfile))]);
+    if (exif.bitDepth)        rows.push(['Bit depth', escHtml(String(exif.bitDepth))]);
+    if (exif.gps?.latitude != null) {
+      rows.push(['GPS', `${Number(exif.gps.latitude).toFixed(5)}, ${Number(exif.gps.longitude).toFixed(5)}`]);
     }
-    document.getElementById('info-content').innerHTML = rows.map(([k,v]) =>
-      `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
-    ).join('');
-    document.getElementById('info-copy').onclick = () => copyLink(f);
-    document.getElementById('info-dl').onclick   = () => downloadFile(f);
-    document.getElementById('info-qr').onclick   = () => { panel.hidden = true; openQRModal(f); };
-  } catch {
-    document.getElementById('info-loading').hidden = true;
-    document.getElementById('info-content').innerHTML = '<p style="color:var(--fail);padding:.5rem">Failed to load details.</p>';
   }
+
+  contentEl.innerHTML = rows.map(([k, v]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
+  ).join('');
 }
 document.getElementById('info-panel-close').addEventListener('click', () => {
   document.getElementById('info-panel').hidden = true;
