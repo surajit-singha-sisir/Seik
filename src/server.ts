@@ -16,6 +16,7 @@ import tagsRouter     from './api/routes/tags.js';
 import filesRouter    from './api/routes/files.js';
 import qrRouter       from './api/routes/qr.js';
 import searchRouter   from './api/routes/search.js';
+import settingsRouter from './api/routes/settings.js';
 
 import { requireAuth, handleLogin, handleLogout } from './middleware/auth.js';
 
@@ -85,6 +86,7 @@ app.use('/api/tags',      tagsRouter);
 app.use('/api/files',     filesRouter);
 app.use('/api/qr',        qrRouter);
 app.use('/api/search',    searchRouter);
+app.use('/api/settings',  settingsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });

@@ -3,6 +3,35 @@
   --ok:#3FA796; --warn:#E8B339; --fail:#e2574c; --line:rgba(237,234,227,.14);
   --line-strong:rgba(237,234,227,.24);
 }
+
+/* ── Light theme overrides ──────────────────────────────────
+   Applied via [data-theme="light"] on <html>, set by theme.js
+   before first paint to avoid a flash of the wrong theme. ── */
+html[data-theme="light"]{
+  --ink:#F7F5F0; --ink-2:#FFFFFF; --paper:#1C1A16; --accent:#E0612F;
+  --ok:#1F8C7A; --warn:#B8800C; --fail:#C8392E; --line:rgba(28,26,22,.10);
+  --line-strong:rgba(28,26,22,.18);
+}
+html[data-theme="light"] .sidebar,
+html[data-theme="light"] .modal,
+html[data-theme="light"] .toast{
+  background:#FBFAF7;
+}
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .g-card,
+html[data-theme="light"] .settings-card{
+  background:rgba(28,26,22,.02);
+}
+html[data-theme="light"] .nav-link:hover{
+  background:rgba(28,26,22,.05);
+}
+html[data-theme="light"] .lightbox{
+  background:rgba(247,245,240,.94);
+}
+html[data-theme="light"] .lb-close,
+html[data-theme="light"] .lb-actions{
+  background:rgba(255,255,255,.85);
+}
 *{box-sizing:border-box}
 html,body{ margin:0; }
 body{
