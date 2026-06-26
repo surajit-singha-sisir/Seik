@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Seik — Settings</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css" />
+<link rel="stylesheet" href="/css/dashboard.css" />
+<link rel="stylesheet" href="/css/settings.css" />
+<script src="/js/theme.js"></script>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a href="/" class="brand"><i class="fa-solid fa-circle-half-stroke"></i><span>Seik</span></a>
+    <nav class="nav">
+      <a href="/" class="nav-link"><i class="fa-solid fa-table-cells-large"></i> Dashboard</a>
+      <a href="/upload.html" class="nav-link"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</a>
+      <a href="/gallery.html" class="nav-link"><i class="fa-solid fa-images"></i> Gallery</a>
+      <a href="/albums.html" class="nav-link"><i class="fa-solid fa-folder-open"></i> Albums</a>
+      <a href="/tags.html" class="nav-link"><i class="fa-solid fa-tag"></i> Tags</a>
+      <a href="/settings.html" class="nav-link active"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <button class="sidebar-logout" id="logout-btn" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+    <div class="sidebar-foot mono" id="api-status">
+      <span class="dot dot-pending"></span> checking…
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="dash-main">
+    <div class="settings-layout">
+
+      <!-- Page header -->
+      <div class="settings-header">
+        <div>
+          <h1><i class="fa-solid fa-gear" style="font-size:1.1rem;color:var(--accent)"></i> Settings</h1>
+          <p>Manage your preferences, API keys, and server configuration</p>
+        </div>
+      </div>
+
+      <!-- Restart banner (shows after env/password changes) -->
+      <div class="restart-banner" id="restart-banner">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Some changes require a server restart to take effect.</span>
+        <button class="btn-settings danger" id="restart-btn"><i class="fa-solid fa-rotate-right"></i> Restart now</button>
+      </div>
+
+      <!-- ── 1. Appearance ───────────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-palette"></i>
+          <h2>Appearance</h2>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Theme
+            <div class="settings-row-sub">Switch between dark and light mode</div>
+          </div>
+          <div class="toggle-wrap">
+            <span class="toggle-label-text" id="theme-label">Dark</span>
+            <label class="toggle" title="Toggle theme">
+              <input type="checkbox" id="theme-toggle" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. Upload settings ──────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <h2>Upload</h2>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Max upload size (MB)
+            <div class="settings-row-sub">Per-file size ceiling. Requires restart after saving.</div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input type="number" class="settings-input" id="upload-size" min="1" max="500" step="1" style="width:90px" />
+            <button class="btn-settings accent" id="save-upload-size"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Default compression quality
+            <div class="settings-row-sub">JPEG/WebP quality for new uploads (1 – 100)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:.65rem">
+            <input type="range" class="settings-input" id="quality-range" min="1" max="100" step="1" />
+            <span class="range-value" id="quality-value">85</span>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Default album
+            <div class="settings-row-sub">Auto-assign newly uploaded files to this album</div>
+          </div>
+          <select class="settings-select" id="default-album">
+            <option value="">— None —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── 3. Gallery settings ─────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-images"></i>
+          <h2>Gallery</h2>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Items per page
+            <div class="settings-row-sub">Number of images shown per gallery page (10 – 500)</div>
+          </div>
+          <input type="number" class="settings-input" id="page-size" min="10" max="500" step="10" />
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Confirm before delete
+            <div class="settings-row-sub">Show a confirmation prompt when deleting files</div>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" id="confirm-delete" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 4. API credentials ──────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-key"></i>
+          <h2>API credentials</h2>
+        </div>
+
+        <!-- ImgBB API Key -->
+        <div class="settings-row">
+          <div class="settings-row-label" style="flex:none;width:100%">
+            ImgBB API key
+            <div class="settings-row-sub">Current: <span class="masked-val" id="imgbb-masked">loading…</span></div>
+          </div>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start">
+          <div class="settings-inline-form">
+            <div class="input-row">
+              <input type="password" class="settings-input" id="imgbb-key-input" placeholder="Paste new API key…" autocomplete="off" />
+              <button class="btn-settings accent" id="save-imgbb-key"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ImgBB API URL -->
+        <div class="settings-row">
+          <div class="settings-row-label" style="flex:none;width:100%">
+            ImgBB API URL
+            <div class="settings-row-sub">Base endpoint used for image uploads</div>
+          </div>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start">
+          <div class="settings-inline-form">
+            <div class="input-row">
+              <input type="url" class="settings-input mono" id="imgbb-url" placeholder="https://api.imgbb.com/1/upload" />
+              <button class="btn-settings accent" id="save-imgbb-url"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database URL -->
+        <div class="settings-row">
+          <div class="settings-row-label" style="flex:none;width:100%">
+            Database URL
+            <div class="settings-row-sub">Current: <span class="masked-val" id="db-masked">loading…</span></div>
+          </div>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start">
+          <div class="settings-inline-form">
+            <div class="input-row">
+              <input type="password" class="settings-input mono" id="db-url-input" placeholder="postgres://user:pass@host/db" autocomplete="off" />
+              <button class="btn-settings accent" id="save-db-url"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 5. User account ─────────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-user-shield"></i>
+          <h2>Account</h2>
+        </div>
+
+        <div class="settings-row">
+          <div class="user-info">
+            <div class="user-avatar" id="user-avatar">A</div>
+            <div>
+              <div class="user-name" id="user-name">—</div>
+              <div class="user-role">Administrator</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:.75rem">
+          <div class="settings-row-label">
+            Change password
+            <div class="settings-row-sub">Min. 8 characters. Requires restart to take effect.</div>
+          </div>
+          <div class="pw-section">
+            <input type="password" class="settings-input" id="pw-current" placeholder="Current password" autocomplete="current-password" />
+            <input type="password" class="settings-input" id="pw-new" placeholder="New password" autocomplete="new-password" />
+            <input type="password" class="settings-input" id="pw-confirm" placeholder="Confirm new password" autocomplete="new-password" />
+            <div style="display:flex;justify-content:flex-end;margin-top:.25rem">
+              <button class="btn-settings accent" id="save-password"><i class="fa-solid fa-lock"></i> Change password</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 6. Storage & stats ──────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-database"></i>
+          <h2>Storage</h2>
+        </div>
+        <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:.75rem">
+          <div class="storage-meta">
+            <div class="storage-stats">
+              <div class="storage-stat"><strong id="storage-files">—</strong>Files</div>
+              <div class="storage-stat"><strong id="storage-size">—</strong>Total size</div>
+              <div class="storage-stat"><strong id="storage-albums">—</strong>Albums</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 7. Rate limit info ──────────────────────────── -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <i class="fa-solid fa-gauge-high"></i>
+          <h2>Rate limiting</h2>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label">
+            Current configuration
+            <div class="settings-row-sub">Set via RATE_LIMIT_WINDOW_MS and RATE_LIMIT_MAX in .env</div>
+          </div>
+          <div class="rate-chips">
+            <div class="rate-chip"><span id="rl-max">—</span> req</div>
+            <div class="rate-chip">per <span id="rl-window">—</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.settings-layout -->
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="s-toast" id="s-toast"><i></i><span></span></div>
+
+<!-- Bottom Nav (mobile) -->
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <a href="/" class="bn-link" title="Dashboard"><i class="fa-solid fa-table-cells-large"></i><span>Home</span></a>
+  <a href="/upload.html" class="bn-link" title="Upload"><i class="fa-solid fa-cloud-arrow-up"></i><span>Upload</span></a>
+  <a href="/gallery.html" class="bn-link" title="Gallery"><i class="fa-solid fa-images"></i><span>Gallery</span></a>
+  <a href="/albums.html" class="bn-link" title="Albums"><i class="fa-solid fa-folder-open"></i><span>Albums</span></a>
+  <a href="/tags.html" class="bn-link" title="Tags"><i class="fa-solid fa-tag"></i><span>Tags</span></a>
+  <a href="/settings.html" class="bn-link active" title="Settings"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+</nav>
+
+<script>
+(function(){
+  const btn = document.getElementById('logout-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+  // API status dot
+  fetch('/api/health').then(r => {
+    const el = document.getElementById('api-status');
+    if (el) el.innerHTML = r.ok
+      ? '<span class="dot dot-ok"></span> online'
+      : '<span class="dot dot-fail"></span> error';
+  }).catch(() => {
+    const el = document.getElementById('api-status');
+    if (el) el.innerHTML = '<span class="dot dot-fail"></span> offline';
+  });
+})();
+</script>
+<script src="/js/settings.js"></script>
+</body>
+</html>
