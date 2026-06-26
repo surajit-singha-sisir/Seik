@@ -7,6 +7,7 @@ const helmetFn = (helmet as any).default ?? helmet;
 import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
