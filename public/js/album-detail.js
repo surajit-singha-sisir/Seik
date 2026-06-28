@@ -291,7 +291,7 @@ function buildFileCard(f) {
   info.innerHTML = `<div class="g-name">${escHtml(f.filename)}${favoriteIcon}</div><div class="g-size">${fmtSize(f.size)}</div>`;
   card.appendChild(info);
 
-  if (isImg) card.addEventListener('click', () => openLb(f));
+  if (isImg || isPdf) card.addEventListener('click', () => openLb(f));
   else if (f.viewerUrl || f.imgbbUrl) card.addEventListener('click', () => window.open(f.viewerUrl || f.imgbbUrl, '_blank'));
 
   return card;
