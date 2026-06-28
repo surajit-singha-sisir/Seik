@@ -242,11 +242,13 @@ function renderFiles() {
 function buildFileCard(f) {
   const card = document.createElement('div');
   card.className = 'g-card'; card.title = f.filename;
+  card.dataset.fileId = f.id;   // anchor for deadImageCleanup.js
   const isImg = f.mimeType?.startsWith('image/');
   const thumb = f.thumbUrl || f.imgbbUrl;
   if (isImg && thumb) {
     const img = document.createElement('img');
     img.className = 'g-thumb'; img.src = thumb; img.alt = f.filename; img.loading = 'lazy';
+    img.dataset.fileId = f.id;   // enables deadImageCleanup.js
     img.onerror = () => img.replaceWith(iconThumb(f.mimeType));
     card.appendChild(img);
   } else { card.appendChild(iconThumb(f.mimeType)); }
