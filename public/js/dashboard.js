@@ -72,6 +72,7 @@ function renderGallery(files) {
     const card = document.createElement('div');
     card.className = 'g-card';
     card.title = file.filename;
+    card.dataset.fileId = file.id;   // anchor for deadImageCleanup.js
 
     const isImage = file.mimeType?.startsWith('image/');
     const thumbUrl = file.thumbUrl || file.imgbbUrl;
@@ -82,6 +83,7 @@ function renderGallery(files) {
       img.src = thumbUrl;
       img.alt = file.filename;
       img.loading = 'lazy';
+      img.dataset.fileId = file.id;   // enables deadImageCleanup.js
       img.onerror = () => img.replaceWith(iconThumb(file.mimeType));
       card.appendChild(img);
     } else {
