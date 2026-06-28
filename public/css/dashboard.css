@@ -149,6 +149,13 @@
   border-radius:8px; object-fit:contain; display:block;
 }
 
+.lb-pdf{
+  width:min(92vw, 860px);
+  height:calc(100vh - 7.5rem);
+  border:1px solid var(--line-strong); border-radius:8px;
+  background:#fff; display:block;
+}
+
 .lb-meta{
   position:fixed; bottom:3.8rem; left:50%; transform:translateX(-50%);
   font-size:.72rem; font-family:'JetBrains Mono',monospace;
@@ -215,6 +222,7 @@
   .dash-main{ padding:1.25rem; padding-bottom:5rem; }
   .stats-row{ grid-template-columns:1fr 1fr; }
   .lb-img{ max-height:calc(100vh - 7.5rem); max-width:96vw; }
+  .lb-pdf{ height:calc(100vh - 7.5rem); width:96vw; }
   .lb-meta{ bottom:5.5rem; font-size:.68rem; }
   .lb-actions{ bottom:4.25rem; }
   /* Ensure any page's main content area clears the bottom nav */

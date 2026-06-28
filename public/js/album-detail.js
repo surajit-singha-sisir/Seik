@@ -40,13 +40,23 @@ function showToast(msg, type = '') {
 // ── Lightbox ──────────────────────────────────────────────
 const lightbox = document.getElementById('lightbox');
 const lbImg = document.getElementById('lb-img');
+const lbPdf = document.getElementById('lb-pdf');
 const lbMeta = document.getElementById('lb-meta');
 let lbCurrentFile = null;
 document.getElementById('lb-close').addEventListener('click', closeLb);
 lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLb(); });
 function openLb(f) {
   lbCurrentFile = f;
-  lbImg.src = f.imgbbUrl || f.viewerUrl;
+  // Raw file URL renders directly; viewerUrl is ImgBB's image-only HTML
+  // wrapper page and won't display a PDF inline, so prefer the raw URL.
+  const url = f.imgbbUrl || f.viewerUrl;
+  if (f.mimeType === 'application/pdf') {
+    lbImg.hidden = true; lbImg.src = '';
+    lbPdf.hidden = false; lbPdf.src = url;
+  } else {
+    lbPdf.hidden = true; lbPdf.src = '';
+    lbImg.hidden = false; lbImg.src = url;
+  }
   lbImg.alt = f.filename;
   const d = f.width && f.height ? ` · ${f.width}×${f.height}` : '';
   lbMeta.textContent = `${f.filename} · ${fmtSize(f.size)}${d}`;
@@ -62,7 +72,10 @@ function openLb(f) {
   document.body.style.overflow = 'hidden';
 }
 function closeLb() {
-  lightbox.hidden = true; lbImg.src = ''; document.body.style.overflow = ''; lbCurrentFile = null;
+  lightbox.hidden = true;
+  lbImg.src = ''; lbImg.hidden = false;
+  lbPdf.src = ''; lbPdf.hidden = true;
+  document.body.style.overflow = ''; lbCurrentFile = null;
 }
 
 // ── Copy link ─────────────────────────────────────────────
@@ -257,6 +270,7 @@ function buildFileCard(f) {
   card.className = 'g-card'; card.title = f.filename;
   card.dataset.fileId = f.id;   // anchor for deadImageCleanup.js
   const isImg = f.mimeType?.startsWith('image/');
+  const isPdf = f.mimeType === 'application/pdf';
   const thumb = f.thumbUrl || f.imgbbUrl;
   if (isImg && thumb) {
     const img = document.createElement('img');

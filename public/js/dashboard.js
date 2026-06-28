@@ -75,6 +75,7 @@ function renderGallery(files) {
     card.dataset.fileId = file.id;   // anchor for deadImageCleanup.js
 
     const isImage = file.mimeType?.startsWith('image/');
+    const isPdf = file.mimeType === 'application/pdf';
     const thumbUrl = file.thumbUrl || file.imgbbUrl;
 
     if (isImage && thumbUrl) {
@@ -106,8 +107,8 @@ function renderGallery(files) {
     delBtn.addEventListener('click', e => { e.stopPropagation(); deleteFile(file); });
     card.appendChild(delBtn);
 
-    // Lightbox on click (images only)
-    if (isImage && (file.imgbbUrl || file.viewerUrl)) {
+    // Lightbox on click (images and PDFs)
+    if ((isImage || isPdf) && (file.imgbbUrl || file.viewerUrl)) {
       card.addEventListener('click', () => openLightbox(file));
     } else if (file.viewerUrl || file.imgbbUrl) {
       card.addEventListener('click', () => window.open(file.viewerUrl || file.imgbbUrl, '_blank'));
@@ -140,13 +141,23 @@ function showToast(msg, type = '') {
 // ── Lightbox ──────────────────────────────────────────────
 const lightbox = document.getElementById('lightbox');
 const lbImg    = document.getElementById('lb-img');
+const lbPdf    = document.getElementById('lb-pdf');
 const lbMeta   = document.getElementById('lb-meta');
 const lbClose  = document.getElementById('lb-close');
 let lbCurrentFile = null;
 
 function openLightbox(file) {
   lbCurrentFile = file;
-  lbImg.src = file.imgbbUrl || file.viewerUrl;
+  // Raw file URL renders directly; viewerUrl is ImgBB's image-only HTML
+  // wrapper page and won't display a PDF inline, so prefer the raw URL.
+  const url = file.imgbbUrl || file.viewerUrl;
+  if (file.mimeType === 'application/pdf') {
+    lbImg.hidden = true; lbImg.src = '';
+    lbPdf.hidden = false; lbPdf.src = url;
+  } else {
+    lbPdf.hidden = true; lbPdf.src = '';
+    lbImg.hidden = false; lbImg.src = url;
+  }
   lbImg.alt = file.filename;
   const dims = file.width && file.height ? ` · ${file.width}×${file.height}` : '';
   lbMeta.textContent = `${file.filename} · ${fmtSize(file.size)}${dims}`;
@@ -164,7 +175,8 @@ function openLightbox(file) {
 
 function closeLightbox() {
   lightbox.hidden = true;
-  lbImg.src = '';
+  lbImg.src = ''; lbImg.hidden = false;
+  lbPdf.src = ''; lbPdf.hidden = true;
   document.body.style.overflow = '';
   lbCurrentFile = null;
 }
