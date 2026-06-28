@@ -1,111 +1,72 @@
 /**
  * cleanup.ts
  *
- * Routes that detect and remove DB records whose ImgBB source has been deleted.
+ * API routes for removing stale ImgBB file records from the DB.
  *
- * POST /api/cleanup/verify-all
- *   Scans every file record, probes ImgBB (with placeholder detection),
- *   deletes DB rows for dead files.
- *   Returns { checked, removed, ids }
+ * WHY SERVER-SIDE PROBING IS REMOVED:
+ *   The server's egress network cannot reach i.ibb.co (blocked by the
+ *   Neon/Vercel allowlist). Detection happens entirely in the browser via
+ *   deadImageCleanup.js, which can reach ImgBB just fine.
  *
  * DELETE /api/cleanup/dead/:id
- *   Verify a single file and delete its DB record if dead.
- *   Used by the client-side canvas checker to confirm server-side.
- *   Returns { removed: boolean }
+ *   Client has confirmed this file is dead (placeholder detected or onerror).
+ *   Deletes the DB record unconditionally and returns { removed: true }.
+ *
+ * DELETE /api/cleanup/dead  (body: { ids: string[] })
+ *   Batch version — client reports multiple dead ids at once.
+ *   Returns { removed: number, ids: string[] }
  *
  * GET /api/cleanup/status
- *   Returns last scan summary without running a scan.
+ *   Returns a summary of records removed in this server session.
  */
 
-import { Router } from 'express';
+import { Router }   from 'express';
 import { db, files } from '../../database/index.js';
 import { eq, inArray } from 'drizzle-orm';
-import { findDeadFileIds, isImgbbUrlAlive } from '../../utils/imgbbVerify.js';
 
 const router = Router();
 
-// Simple in-memory record of the last scan (survives for the process lifetime)
-let lastScan: { at: string; checked: number; removed: number; ids: string[] } | null = null;
+// Running total for this server session
+let sessionRemoved = 0;
+const sessionIds: string[] = [];
 
-/* ── POST /api/cleanup/verify-all ────────────────────────────────────── */
-router.post('/verify-all', async (_req, res) => {
+/* ── DELETE /api/cleanup/dead/:id  (single) ──────────────────────────── */
+router.delete('/dead/:id', async (req, res) => {
+  const { id } = req.params;
   try {
-    const allFiles = await db
-      .select({
-        id:       files.id,
-        imgbbUrl: files.imgbbUrl,
-        thumbUrl: files.thumbUrl,
-        size:     files.size,
-      })
-      .from(files);
-
-    if (allFiles.length === 0) {
-      lastScan = { at: new Date().toISOString(), checked: 0, removed: 0, ids: [] };
-      return res.json(lastScan);
-    }
-
-    const deadIds = await findDeadFileIds(allFiles);
-
-    if (deadIds.length > 0) {
-      await db.delete(files).where(inArray(files.id, deadIds));
-    }
-
-    lastScan = {
-      at:      new Date().toISOString(),
-      checked: allFiles.length,
-      removed: deadIds.length,
-      ids:     deadIds,
-    };
-
-    console.log(`[cleanup] verify-all: checked ${allFiles.length}, removed ${deadIds.length}`);
-    return res.json(lastScan);
+    await db.delete(files).where(eq(files.id, id));
+    sessionRemoved++;
+    sessionIds.push(id);
+    console.log(`[cleanup] removed dead file record: ${id} (session total: ${sessionRemoved})`);
+    return res.json({ removed: true, id });
   } catch (err) {
-    console.error('[cleanup/verify-all]', err);
-    return res.status(500).json({ error: 'Cleanup scan failed.' });
+    console.error('[cleanup/dead]', err);
+    return res.status(500).json({ error: 'Failed to remove file record.' });
+  }
+});
+
+/* ── DELETE /api/cleanup/dead  (batch) ───────────────────────────────── */
+router.delete('/dead', async (req, res) => {
+  const ids: string[] = req.body?.ids ?? [];
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: '`ids` array is required.' });
+  }
+
+  try {
+    await db.delete(files).where(inArray(files.id, ids));
+    sessionRemoved += ids.length;
+    sessionIds.push(...ids);
+    console.log(`[cleanup] batch removed ${ids.length} dead file records (session total: ${sessionRemoved})`);
+    return res.json({ removed: ids.length, ids });
+  } catch (err) {
+    console.error('[cleanup/dead batch]', err);
+    return res.status(500).json({ error: 'Failed to remove file records.' });
   }
 });
 
 /* ── GET /api/cleanup/status ─────────────────────────────────────────── */
 router.get('/status', (_req, res) => {
-  res.json(lastScan ?? { at: null, checked: 0, removed: 0, ids: [] });
-});
-
-/* ── DELETE /api/cleanup/dead/:id ────────────────────────────────────── */
-router.delete('/dead/:id', async (req, res) => {
-  try {
-    const [file] = await db
-      .select({
-        id:       files.id,
-        imgbbUrl: files.imgbbUrl,
-        thumbUrl: files.thumbUrl,
-        size:     files.size,
-      })
-      .from(files)
-      .where(eq(files.id, req.params.id));
-
-    if (!file) {
-      return res.json({ removed: true }); // already gone
-    }
-
-    const checkUrl = file.thumbUrl || file.imgbbUrl;
-    if (!checkUrl) {
-      // No URL at all — definitely stale, remove it
-      await db.delete(files).where(eq(files.id, file.id));
-      return res.json({ removed: true });
-    }
-
-    const alive = await isImgbbUrlAlive(checkUrl, file.size);
-    if (alive) {
-      return res.json({ removed: false, reason: 'File still alive on ImgBB' });
-    }
-
-    await db.delete(files).where(eq(files.id, file.id));
-    console.log(`[cleanup] dead-file confirmed & removed: ${file.id}`);
-    return res.json({ removed: true });
-  } catch (err) {
-    console.error('[cleanup/dead]', err);
-    return res.status(500).json({ error: 'Failed to verify/remove file.' });
-  }
+  res.json({ sessionRemoved, ids: sessionIds });
 });
 
 export default router;

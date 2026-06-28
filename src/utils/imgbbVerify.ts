@@ -1,141 +1,36 @@
 /**
  * imgbbVerify.ts
  *
- * Detects whether an ImgBB-hosted file has been deleted.
+ * Server-side utilities for detecting dead ImgBB file records.
  *
- * THE PROBLEM:
- *   ImgBB does NOT return 404 for deleted images. Instead it serves its own
- *   cyan "image not found" placeholder at HTTP 200, so a simple HEAD/status
- *   check always reports the file as alive.
+ * IMPORTANT — WHY SERVER-SIDE HTTP PROBING DOES NOT WORK:
+ *   The server environment (Neon/Vercel network) has an egress allowlist that
+ *   blocks outbound requests to i.ibb.co with HTTP 403. Every URL — live or
+ *   dead — is unreachable from the server. We therefore do NOT attempt any
+ *   HTTP probing here.
  *
- * THE SOLUTION — two-signal detection:
- *   1. Content-Length: ImgBB's placeholder is ~1,604 bytes. Any real image
- *      stored by the user will be larger. We treat content-length ≤ 2048 as
- *      "dead" when the stored file size is known to be larger.
- *   2. URL fingerprint: When ImgBB redirects a deleted image the final URL
- *      often contains "not-found", "notfound", or "no-image" path segments.
- *   3. Fallback: if content-length is missing (chunked transfer), we do a
- *      full GET and check the actual byte count of the response body.
+ * DETECTION STRATEGY:
+ *   Detection is done entirely client-side (see deadImageCleanup.js):
+ *     1. Canvas pixel sampling — ImgBB's "not found" placeholder is a
+ *        solid cyan tile (rgb ~0, 178, 255). Real images have varied pixels.
+ *     2. img.onerror — catches true network failures.
+ *   When either signal fires, the client calls DELETE /api/cleanup/dead/:id
+ *   which deletes the DB record unconditionally (client is trusted because it
+ *   is the only party that can actually reach ImgBB).
+ *
+ * This file is kept for shared type definitions and the DB-layer helper used
+ * by the cleanup route.
  */
 
-import axios from 'axios';
-
-/** Byte-size ceiling for ImgBB's own "not found" placeholder image. */
-const IMGBB_PLACEHOLDER_MAX_BYTES = 2048;
-
-/** URL fragments that appear in ImgBB's not-found redirect targets. */
-const DEAD_URL_PATTERNS = ['not-found', 'notfound', 'no-image', 'deleted'];
-
-function looksLikeDeadUrl(url: string): boolean {
-  const lower = url.toLowerCase();
-  return DEAD_URL_PATTERNS.some(p => lower.includes(p));
-}
+import { db, files } from '../database/index.js';
+import { inArray }   from 'drizzle-orm';
 
 /**
- * Returns true when the ImgBB URL resolves to a real image.
- * Returns false when it resolves to ImgBB's placeholder (deleted file).
- *
- * @param url        - The imgbbUrl or thumbUrl stored in the DB
- * @param storedSize - The file's `size` column value (bytes). When provided,
- *                     used as an extra cross-check against content-length.
+ * Delete a batch of file records from the DB by their ids.
+ * Called by the cleanup route after the client has confirmed files are dead.
  */
-export async function isImgbbUrlAlive(
-  url: string,
-  storedSize?: number | null,
-): Promise<boolean> {
-  if (!url) return false;
-
-  try {
-    // ── Step 1: HEAD request to get headers cheaply ──────────────────────
-    const head = await axios.head(url, {
-      timeout: 8000,
-      maxRedirects: 5,
-      validateStatus: () => true,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImgbbVerifyBot/1.0)',
-      },
-    });
-
-    // Hard 404/410 — definitely dead
-    if (head.status === 404 || head.status === 410) return false;
-
-    // Check if the redirect landed on a known dead-URL pattern
-    const finalUrl: string = (head.request?.res?.responseUrl as string) || url;
-    if (looksLikeDeadUrl(finalUrl)) return false;
-
-    // ── Step 2: Content-Length signal ────────────────────────────────────
-    const contentLength = Number(head.headers['content-length'] ?? NaN);
-
-    if (!Number.isNaN(contentLength)) {
-      // If content-length is tiny it's the placeholder, not a real image
-      if (contentLength <= IMGBB_PLACEHOLDER_MAX_BYTES) return false;
-
-      // If we know the original size, the response must be at least 50% of it
-      // (ImgBB may serve a compressed variant, but never 1 KB for a 100 KB file)
-      if (storedSize && storedSize > IMGBB_PLACEHOLDER_MAX_BYTES) {
-        if (contentLength <= IMGBB_PLACEHOLDER_MAX_BYTES) return false;
-      }
-
-      // Content-length looks plausible → file is alive
-      return true;
-    }
-
-    // ── Step 3: No Content-Length header — do a full GET and measure ─────
-    // (chunked transfers don't send content-length)
-    const get = await axios.get(url, {
-      timeout: 10000,
-      maxRedirects: 5,
-      responseType: 'arraybuffer',
-      validateStatus: () => true,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImgbbVerifyBot/1.0)',
-      },
-    });
-
-    const finalGetUrl: string = (get.request?.res?.responseUrl as string) || url;
-    if (looksLikeDeadUrl(finalGetUrl)) return false;
-    if (get.status === 404 || get.status === 410) return false;
-
-    const bodyBytes: number = (get.data as Buffer)?.byteLength ?? 0;
-    return bodyBytes > IMGBB_PLACEHOLDER_MAX_BYTES;
-
-  } catch {
-    // Network error — can't confirm dead, treat as unknown / skip
-    return true;
-  }
-}
-
-/**
- * Given an array of file rows, checks each URL concurrently and returns
- * the ids of files whose ImgBB source has been deleted (serving placeholder).
- */
-export async function findDeadFileIds(
-  fileRows: Array<{
-    id: string;
-    imgbbUrl: string | null;
-    thumbUrl: string | null;
-    size?: number | null;
-  }>,
-  concurrency = 6,
-): Promise<string[]> {
-  const dead: string[] = [];
-
-  for (let i = 0; i < fileRows.length; i += concurrency) {
-    const chunk = fileRows.slice(i, i + concurrency);
-    const results = await Promise.all(
-      chunk.map(async (f) => {
-        // Prefer thumbUrl (smaller download if we reach step 3)
-        const checkUrl = f.thumbUrl || f.imgbbUrl;
-        if (!checkUrl) return f.id; // no URL stored → treat as dead
-
-        const alive = await isImgbbUrlAlive(checkUrl, f.size);
-        return alive ? null : f.id;
-      }),
-    );
-    for (const id of results) {
-      if (id !== null) dead.push(id);
-    }
-  }
-
-  return dead;
+export async function deleteFileRecords(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  await db.delete(files).where(inArray(files.id, ids));
+  return ids.length;
 }
