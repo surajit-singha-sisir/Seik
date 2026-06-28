@@ -21,6 +21,7 @@ import qrRouter       from './api/routes/qr.js';
 import searchRouter   from './api/routes/search.js';
 import settingsRouter from './api/routes/settings.js';
 import cleanupRouter  from './api/routes/cleanup.js';
+import { findDeadFileIds } from './utils/imgbbVerify.js';
 
 import { requireAuth, handleLogin, handleLogout } from './middleware/auth.js';
 
@@ -116,6 +117,35 @@ app.get('/tags/:id', (_req, res) =>
 // ── Start ─────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Seik server running at http://localhost:${PORT}`);
+
+  // Run a background ImgBB dead-file sweep shortly after startup.
+  // Runs silently — any errors are logged but never crash the server.
+  setTimeout(async () => {
+    try {
+      console.log('[startup] Running ImgBB dead-file cleanup scan...');
+      const { db, files } = await import('./database/index.js');
+      const { inArray }   = await import('drizzle-orm');
+
+      const allFiles = await db
+        .select({ id: files.id, imgbbUrl: files.imgbbUrl, thumbUrl: files.thumbUrl, size: files.size })
+        .from(files);
+
+      if (allFiles.length === 0) {
+        console.log('[startup] No files to check.');
+        return;
+      }
+
+      const deadIds = await findDeadFileIds(allFiles);
+      if (deadIds.length > 0) {
+        await db.delete(files).where(inArray(files.id, deadIds));
+        console.log(`[startup] Cleanup complete — removed ${deadIds.length} dead file record(s).`);
+      } else {
+        console.log(`[startup] Cleanup complete — all ${allFiles.length} file(s) are alive.`);
+      }
+    } catch (err) {
+      console.error('[startup] Dead-file cleanup failed (non-fatal):', err);
+    }
+  }, 5000); // 5-second delay so the DB pool is fully ready
 });
 
 export default app;
