@@ -6,14 +6,12 @@ import { validateUpload } from '../../utils/validateUpload.js';
 import { UploadError } from '../../utils/errors.js';
 import { extractMetadata } from './metadataService.js';
 import { compressImage } from './compressionService.js';
-import { findDuplicate } from './duplicateService.js';
 export async function processUpload(input) {
     const validation = await validateUpload(input.buffer, input.originalFilename, input.claimedMimeType);
     if (!validation.ok) {
         throw new UploadError(validation.reason, 'VALIDATION_FAILED');
     }
     const hash = computeHash(input.buffer);
-    const duplicate = await findDuplicate(hash); // warn-but-allow: never throws/blocks
     const mimeType = validation.detectedMime || input.claimedMimeType;
     const metadata = await extractMetadata(input.buffer, mimeType);
     const quality = Math.min(100, Math.max(1, Math.round(input.quality ?? (Number(process.env.DEFAULT_COMPRESSION_QUALITY) || 85))));
@@ -61,7 +59,6 @@ export async function processUpload(input) {
     });
     return {
         file: fileRow,
-        duplicate,
         compression: {
             originalSize: input.buffer.length,
             compressedSize: outBuffer.length,

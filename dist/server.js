@@ -2,9 +2,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const helmetFn = helmet.default ?? helmet;
 import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import uploadsRouter from './api/routes/uploads.js';
@@ -15,13 +18,19 @@ import tagsRouter from './api/routes/tags.js';
 import filesRouter from './api/routes/files.js';
 import qrRouter from './api/routes/qr.js';
 import searchRouter from './api/routes/search.js';
+import settingsRouter from './api/routes/settings.js';
+import cleanupRouter from './api/routes/cleanup.js';
+import { findDeadFileIds } from './utils/imgbbVerify.js';
 import { requireAuth, handleLogin, handleLogout } from './middleware/auth.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.env.NODE_ENV === 'production';
+// Trust Vercel's proxy so secure cookies work over HTTPS
+if (isProd)
+    app.set('trust proxy', 1);
 // ── Security headers ──────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmetFn({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '2mb' }));
@@ -35,16 +44,23 @@ app.use(rateLimit({
     skip: () => !isProd,
 }));
 // ── Session store ─────────────────────────────────────────
+const PgSession = connectPgSimple(session);
 app.use(session({
+    store: new PgSession({
+        conString: process.env.DATABASE_URL,
+        tableName: 'session',
+        createTableIfMissing: true,
+    }),
     name: 'seik.sid',
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    proxy: isProd,
     cookie: {
-        httpOnly: true, // JS cannot read cookie
-        sameSite: 'strict', // CSRF protection
-        secure: isProd, // HTTPS only in production
-        maxAge: 8 * 60 * 60 * 1000, // 8-hour session
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isProd,
+        maxAge: 8 * 60 * 60 * 1000,
     },
 }));
 // ── Public static (login page assets only) ───────────────
@@ -69,6 +85,8 @@ app.use('/api/tags', tagsRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/qr', qrRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/cleanup', cleanupRouter);
 app.get('/api/health', (_req, res) => {
     res.json({ ok: true, app: process.env.APP_NAME || 'Seik' });
 });
@@ -78,6 +96,33 @@ app.get('/tags/:id', (_req, res) => res.sendFile(path.join(__dirname, '..', 'pub
 // ── Start ─────────────────────────────────────────────────
 app.listen(PORT, () => {
     console.log(`Seik server running at http://localhost:${PORT}`);
+    // Run a background ImgBB dead-file sweep shortly after startup.
+    // Runs silently — any errors are logged but never crash the server.
+    setTimeout(async () => {
+        try {
+            console.log('[startup] Running ImgBB dead-file cleanup scan...');
+            const { db, files } = await import('./database/index.js');
+            const { inArray } = await import('drizzle-orm');
+            const allFiles = await db
+                .select({ id: files.id, imgbbUrl: files.imgbbUrl, thumbUrl: files.thumbUrl, size: files.size })
+                .from(files);
+            if (allFiles.length === 0) {
+                console.log('[startup] No files to check.');
+                return;
+            }
+            const deadIds = await findDeadFileIds(allFiles);
+            if (deadIds.length > 0) {
+                await db.delete(files).where(inArray(files.id, deadIds));
+                console.log(`[startup] Cleanup complete — removed ${deadIds.length} dead file record(s).`);
+            }
+            else {
+                console.log(`[startup] Cleanup complete — all ${allFiles.length} file(s) are alive.`);
+            }
+        }
+        catch (err) {
+            console.error('[startup] Dead-file cleanup failed (non-fatal):', err);
+        }
+    }, 5000); // 5-second delay so the DB pool is fully ready
 });
 export default app;
 //# sourceMappingURL=server.js.map
