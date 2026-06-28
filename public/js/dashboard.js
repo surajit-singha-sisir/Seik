@@ -98,6 +98,14 @@ function renderGallery(files) {
     `;
     card.appendChild(info);
 
+    // Per-card delete button (visible on hover)
+    const delBtn = document.createElement('button');
+    delBtn.className = 'g-del';
+    delBtn.title = 'Delete file';
+    delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+    delBtn.addEventListener('click', e => { e.stopPropagation(); deleteFile(file); });
+    card.appendChild(delBtn);
+
     // Lightbox on click (images only)
     if (isImage && (file.imgbbUrl || file.viewerUrl)) {
       card.addEventListener('click', () => openLightbox(file));
@@ -148,6 +156,7 @@ function openLightbox(file) {
   document.getElementById('lb-fav').onclick      = () => toggleFav(file);
   document.getElementById('lb-qr').onclick       = () => openQRModal(file);
   document.getElementById('lb-info').onclick     = () => openInfoPanel(file);
+  document.getElementById('lb-delete').onclick   = () => deleteFile(file);
 
   lightbox.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -164,7 +173,21 @@ lbClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
-// ── Copy link ─────────────────────────────────────────────
+// ── Delete file ───────────────────────────────────────────
+async function deleteFile(file) {
+  if (!confirm(`Delete "${file.filename}" permanently?\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/files/${file.id}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Delete failed', 'fail'); return; }
+    showToast('File deleted');
+    // Remove card from DOM
+    const card = document.querySelector(`[data-file-id="${file.id}"]`);
+    if (card) { card.style.transition='opacity .3s'; card.style.opacity='0'; setTimeout(()=>card.remove(),320); }
+    closeLightbox();
+  } catch { showToast('Network error', 'fail'); }
+}
+
+
 async function copyLink(f) {
   const url = f.viewerUrl || f.imgbbUrl;
   if (!url) { showToast('No public URL', 'fail'); return; }

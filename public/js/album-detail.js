@@ -56,6 +56,7 @@ function openLb(f) {
   document.getElementById('lb-fav').onclick      = () => toggleFav(f);
   document.getElementById('lb-qr').onclick       = () => openQRModal(f);
   document.getElementById('lb-info').onclick     = () => openInfoPanel(f);
+  document.getElementById('lb-delete').onclick   = () => deleteFile(f);
 
   lightbox.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -296,6 +297,17 @@ async function removeFromAlbum(f) {
   } catch {
     showToast('Network error', 'fail');
   }
+}
+
+async function deleteFile(f) {
+  if (!confirm(`Delete "${f.filename}" permanently?\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/files/${f.id}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Delete failed', 'fail'); return; }
+    showToast('File deleted');
+    closeLb();
+    await loadAlbum();
+  } catch { showToast('Network error', 'fail'); }
 }
 
 // ── Album actions ─────────────────────────────────────────

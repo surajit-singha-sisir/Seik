@@ -77,6 +77,7 @@ function openLb(f) {
   document.getElementById('lb-download').onclick = () => downloadFile(f);
   document.getElementById('lb-fav').onclick = () => toggleFav(f);
   document.getElementById('lb-info').onclick = () => openInfoPanel(f);
+  document.getElementById('lb-delete').onclick = () => deleteFile(f);
   lightbox.hidden = false;
   document.body.style.overflow = 'hidden';
 }
@@ -96,6 +97,21 @@ function downloadFile(f) {
   const a = document.createElement('a');
   a.href = url; a.download = f.filename; a.target = '_blank';
   document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ── Delete file ───────────────────────────────────────────
+async function deleteFile(f) {
+  if (!confirm(`Delete "${f.filename}" permanently?\nThis cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/files/${f.id}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Delete failed', 'fail'); return; }
+    showToast('File deleted');
+    closeLb();
+    // Remove card immediately, then reload to sync counts
+    const card = document.querySelector(`[data-file-id="${f.id}"]`);
+    if (card) { card.style.transition='opacity .3s'; card.style.opacity='0'; setTimeout(()=>{ card.remove(); }, 320); }
+    setTimeout(() => loadGallery(false), 400);
+  } catch { showToast('Network error', 'fail'); }
 }
 
 // ── Favorite toggle ───────────────────────────────────────
@@ -248,6 +264,14 @@ function buildCard(f) {
   cb.className = 'g-select-check';
   cb.innerHTML = '<i class="fa-solid fa-check"></i>';
   card.appendChild(cb);
+
+  // Per-card delete button (visible on hover, hidden in select mode)
+  const delBtn = document.createElement('button');
+  delBtn.className = 'g-del';
+  delBtn.title = 'Delete file';
+  delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+  delBtn.addEventListener('click', e => { e.stopPropagation(); deleteFile(f); });
+  card.appendChild(delBtn);
 
   // Fav indicator
   if (f.favorite) {
