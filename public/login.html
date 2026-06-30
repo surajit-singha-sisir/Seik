@@ -161,14 +161,20 @@
   .dots span:nth-child(3) { animation-delay: .30s; }
   @keyframes bounce { 0%,80%,100%{transform:scale(.6)} 40%{transform:scale(1)} }
 
-  .lockout-bar {
-    display: none;
-    margin-top: 1rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: .75rem;
-    color: rgba(237,234,227,.35);
+  .lockout-bar { display: none; margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: rgba(237,234,227,.35); text-align: center; }
+
+  .register-link {
+    margin-top: 1.5rem;
     text-align: center;
+    font-size: .82rem;
+    color: rgba(237,234,227,.4);
   }
+  .register-link a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .register-link a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -212,6 +218,10 @@
 
   <p class="lockout-bar" id="lockout-bar">
     <i class="fa-solid fa-clock"></i> &nbsp;<span id="lockout-countdown"></span>
+  </p>
+
+  <p class="register-link">
+    New here? <a href="/register">Create your own account</a>
   </p>
 </div>
 

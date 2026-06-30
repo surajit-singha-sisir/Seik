@@ -1,5 +1,6 @@
 import type { StorageProvider } from './StorageProvider.js';
 import { ImgbbStorageProvider } from './ImgbbStorageProvider.js';
+import { getTenantContext } from '../../database/tenantContext.js';
 
 const providers: Record<string, () => StorageProvider> = {
   imgbb: () => new ImgbbStorageProvider(),
@@ -11,7 +12,9 @@ const providers: Record<string, () => StorageProvider> = {
 };
 
 export function getStorageProvider(name?: string): StorageProvider {
-  const key = name || process.env.STORAGE_PROVIDER || 'imgbb';
+  // Falls back to the active tenant's chosen provider (set at registration),
+  // then to the legacy .env default — same fallback chain as the API key.
+  const key = name || getTenantContext().storageProvider || process.env.STORAGE_PROVIDER || 'imgbb';
   const factory = providers[key];
   if (!factory) {
     throw new Error(`Unknown storage provider: "${key}"`);

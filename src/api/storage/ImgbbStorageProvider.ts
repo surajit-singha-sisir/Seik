@@ -5,15 +5,20 @@ import type {
   UploadResult,
   FileMetadataResult,
 } from './StorageProvider.js';
+import { getTenantContext } from '../../database/tenantContext.js';
 
 const IMGBB_API_URL = process.env.IMGBB_API_URL || 'https://api.imgbb.com/1/upload';
 
 export class ImgbbStorageProvider implements StorageProvider {
   readonly name = 'imgbb';
 
+  /** Resolves the calling user's own ImgBB key via the per-request tenant
+   * context (set by attachTenant for registered accounts). Falls back to
+   * the legacy .env IMGBB_API_KEY automatically — getTenantContext() does
+   * that fallback itself when no tenant is active. */
   private get apiKey(): string {
-    const key = process.env.IMGBB_API_KEY;
-    if (!key) throw new Error('IMGBB_API_KEY is not set');
+    const key = getTenantContext().imgbbApiKey || process.env.IMGBB_API_KEY;
+    if (!key) throw new Error('No ImgBB API key available for this account.');
     return key;
   }
 

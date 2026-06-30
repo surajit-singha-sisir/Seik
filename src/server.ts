@@ -22,7 +22,9 @@ import searchRouter   from './api/routes/search.js';
 import settingsRouter from './api/routes/settings.js';
 import cleanupRouter  from './api/routes/cleanup.js';
 
-import { requireAuth, handleLogin, handleLogout } from './middleware/auth.js';
+import accountRouter from './api/routes/account.js';
+import { requireAuth, attachTenant, handleLogin, handleLogout } from './middleware/auth.js';
+import { ensureControlSchema } from './database/control.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,19 +76,44 @@ app.use(
   }),
 );
 
-// ── Public static (login page assets only) ───────────────
-// Only /css/theme.css and /login itself bypass auth
+// ── Public static (login + register page assets only) ────
+// Only /css/theme.css and /login, /register themselves bypass auth
 app.use('/css/theme.css', express.static(path.join(__dirname, '..', 'public', 'css', 'theme.css')));
 app.get('/login', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
+});
+app.get('/register', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
 });
 
 // ── Auth endpoints (public) ───────────────────────────────
 app.post('/auth/login',  handleLogin);
 app.post('/auth/logout', handleLogout);
+app.use('/auth', accountRouter);
+app.get('/auth/requirements', (_req, res) => {
+  res.json({
+    appName: process.env.APP_NAME || 'Seik',
+    fields: [
+      { key: 'username', label: 'Username', hint: 'At least 3 characters. Used to sign in.' },
+      { key: 'email', label: 'Email', hint: 'Used to sign in and recover your account.' },
+      { key: 'password', label: 'Password', hint: 'At least 8 characters.' },
+      {
+        key: 'imgbbApiKey',
+        label: 'ImgBB API key',
+        hint: 'Your own free key from api.imgbb.com/ — every image you upload is stored on your ImgBB account, not the app owner\'s.',
+      },
+      {
+        key: 'neonDatabaseUrl',
+        label: 'Neon database connection string',
+        hint: 'A free Postgres database from neon.tech — starts with postgresql://. Your albums, tags, and file records live here, fully separate from every other user.',
+      },
+    ],
+  });
+});
 
 // ── Everything below requires a valid session ─────────────
 app.use(requireAuth);
+app.use(attachTenant);
 
 // ── Protected static files ────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -114,8 +141,14 @@ app.get('/tags/:id', (_req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'tag.html')));
 
 // ── Start ─────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`Seik server running at http://localhost:${PORT}`);
-});
+ensureControlSchema()
+  .catch((err) => {
+    console.error('[startup] failed to ensure control schema:', err);
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Seik server running at http://localhost:${PORT}`);
+    });
+  });
 
 export default app;
