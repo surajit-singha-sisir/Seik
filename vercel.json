@@ -2,7 +2,15 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install --include=dev",
+  "functions": {
+    "dist/server.js": {
+      "regions": ["sin1"]
+    }
+  },
   "routes": [
-    { "src": "/(.*)", "dest": "dist/server.js" }
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
   ]
 }
